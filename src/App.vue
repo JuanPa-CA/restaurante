@@ -3,11 +3,13 @@
     <!-- Header -->
     <header>
       <h1>RESTAURANTE BRISTO</h1>
-      <button class="btn-pedido" v-on:click="abrirModal">
-        <span>{{ carrito.length > 0 ? 'Mi Carrito ' : 'CARRITO' }}</span>
-        <span class="badge-carrito">{{ totalUnidades }}</span>
-      </button>
-
+      <div class="header-actions">
+        <button class="btn-agregar-plus" v-on:click="abrirFormPlato()">+</button>
+        <button class="btn-pedido" v-on:click="abrirModal">
+          <span>{{ carrito.length > 0 ? 'Mi Carrito ' : 'CARRITO' }}</span>
+          <span class="badge-carrito">{{ totalUnidades }}</span>
+        </button>
+      </div>
     </header>
 
     <!-- Barra de Categorias -->
@@ -25,14 +27,25 @@
 
     <!--Barra de busqueda-->
     <div class="contenedor-busqueda">
-      <input type="text" placeholder="¿Que plato buscas?" v-model="textoBusqueda" v-on:input="aplicarFiltros"
-        class="input-busqueda">
+      <div class="busqueda-wrapper">
+        <span class="icon-busqueda">🔍</span>
+        <input type="text" placeholder="¿Que plato buscas?" v-model="textoBusqueda" v-on:input="aplicarFiltros"
+          class="input-busqueda">
+      </div>
     </div>
 
     <!-- Grid de Productos -->
     <main>
       <div class="grid-productos">
-        <div v-for="producto in platosFiltrados" class="card">
+        <div v-for="producto in platosFiltrados" class="card" :key="producto.nombre">
+
+          <div class="card-options">
+            <button class="btn-dots" v-on:click.stop="toggleMenu(producto.nombre)">...</button>
+            <div v-if="menuAbierto === producto.nombre" class="dropdown-menu">
+              <button v-on:click="abrirFormPlato(producto)">Editar</button>
+              <button class="btn-eliminar" v-on:click="eliminarPlato(producto.nombre)">Eliminar</button>
+            </div>
+          </div>
 
           <div class="card-en-pedido" v-if="cantidadEnCarrito(producto.nombre) > 0">
             {{ cantidadEnCarrito(producto.nombre) }} en pedido
@@ -62,6 +75,58 @@
         </div>
       </div>
     </main>
+
+    <!-- Modal Formulario Producto -->
+    <div v-if="mostrarFormPlato" class="modal-overlay" v-on:click.self="cerrarFormPlato">
+      <div class="factura-box formulario-producto">
+        <div class="factura-header">
+          <h2>{{ editandoPlatoNombre ? 'EDITAR' : 'NUEVO' }} PLATO</h2>
+          <button v-on:click="cerrarFormPlato" class="btn-cerrar-x">x</button>
+        </div>
+        <div class="factura-body">
+          <div class="form-datos">
+            <div class="form-field">
+              <label>NOMBRE DEL PLATO</label>
+              <input type="text" v-model="formPlato.nombre" placeholder="Ej: Pizza Hawayana">
+            </div>
+            <div class="form-field">
+              <label>DESCRIPCIÓN</label>
+              <textarea v-model="formPlato.descripcion" rows="2" placeholder="Ingredientes y detalles..."></textarea>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-field">
+                <label>PRECIO ($)</label>
+                <input type="number" v-model="formPlato.precio">
+              </div>
+              <div class="form-field">
+                <label>STOCK</label>
+                <input type="number" v-model="formPlato.stock">
+              </div>
+            </div>
+            <div class="form-field">
+              <label>CATEGORÍA</label>
+              <select v-model="formPlato.categoria">
+                <option v-for="cat in categorias.filter(c => c !== 'Todas')" :value="cat">{{ cat }}</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>IMAGEN DEL PLATO</label>
+              <div class="upload-wrapper">
+                <input type="file" v-on:change="manejarArchivo" accept="image/*" class="file-input">
+                <div v-if="formPlato.imagen" class="preview-mini">
+                  <img :src="formPlato.imagen" alt="Vista previa">
+                </div>
+              </div>
+            </div>
+            <div class="botones-pago">
+              <button class="btn-pedido btn-gris" v-on:click="cerrarFormPlato">CANCELAR</button>
+              <button class="btn-pedido" v-on:click="guardarPlato">GUARDAR PRODUCTO</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     
     <!-- Modal Factura -->
     <div v-if="mostrarModal" class="modal-overlay" v-on:click="cerrarSiEsFuera">
@@ -193,48 +258,51 @@ import Swal from 'sweetalert2';
 // ========================================
 // 1. ESTADO REACTIVO
 // ========================================
-const platos = ref([
+const PLATOS_POR_DEFECTO = [
   { nombre: "Hamburguesa Especial", descripcion: "Carne angus 200g, queso cheddar, tocino y vegetales frescos.", precio: 25000, imagen: "src/assets/hamburguesaE.jpg", categoria: "Rapidas", stock: 8 },
-  { nombre: "Club Sandwich", descripcion: "Triple piso with pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
-  { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapenos, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
-  { nombre: "Nuggets de Pollo", descripcion: "8 piezas de pechuga apanada with papas fritas pequenas.", precio: 16000, imagen: "src/assets/nuggetsP.jpg", categoria: "Snacks", stock: 20 },
+  { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
+  { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapeños, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
+  { nombre: "Nuggets de Pollo", descripcion: "8 piezas de pechuga apanada con papas fritas pequeñas.", precio: 16000, imagen: "src/assets/nuggetsP.jpg", categoria: "Snacks", stock: 20 },
   { nombre: "Salchipapa Monstruosa", descripcion: "Cama de papas fritas, salchicha suiza, pollo desmechado y mucho queso.", precio: 32000, imagen: "src/assets/salchipapaM.jpg", categoria: "Snacks", stock: 6 },
-  { nombre: "Empanadas (x3)", descripcion: "Tradicionales de carne y papa, acompanadas de aji casero.", precio: 12000, imagen: "src/assets/empanadasT.jpg", categoria: "Snacks", stock: 30 },
-  { nombre: "Nachos Locos", descripcion: "Totopos crujientes with chili, queso fundido y pico de gallo.", precio: 19000, imagen: "src/assets/nachosL.jpg", categoria: "Snacks", stock: 10 },
-  { nombre: "Papas Bravas", descripcion: "Cubos de papa frita with salsa picante y alioli.", precio: 14000, imagen: "src/assets/papasB.jpg", categoria: "Snacks", stock: 18 },
-  { nombre: "Alitas BBQ (x10)", descripcion: "Alitas crujientes banadas en salsa a eleccion.", precio: 29000, imagen: "src/assets/alitasB.jpg", categoria: "Snacks", stock: 12 },
-  { nombre: "Tacos al Pastor", descripcion: "3 tacos de cerdo marinado with pina, cilantro y cebolla.", precio: 20000, imagen: "src/assets/tacosP.jpg", categoria: "Tacos y Wraps", stock: 25 },
+  { nombre: "Empanadas (x3)", descripcion: "Tradicionales de carne y papa, acompañadas de aji casero.", precio: 12000, imagen: "src/assets/empanadasT.jpg", categoria: "Snacks", stock: 30 },
+  { nombre: "Nachos Locos", descripcion: "Totopos crujientes con chili, queso fundido y pico de gallo.", precio: 19000, imagen: "src/assets/nachosL.jpg", categoria: "Snacks", stock: 10 },
+  { nombre: "Papas Bravas", descripcion: "Cubos de papa frita con salsa picante y alioli.", precio: 14000, imagen: "src/assets/papasB.jpg", categoria: "Snacks", stock: 18 },
+  { nombre: "Alitas BBQ (x10)", descripcion: "Alitas crujientes bañadas en salsa a eleccion.", precio: 29000, imagen: "src/assets/alitasB.jpg", categoria: "Snacks", stock: 12 },
+  { nombre: "Tacos al Pastor", descripcion: "3 tacos de cerdo marinado con piña, cilantro y cebolla.", precio: 20000, imagen: "src/assets/tacosP.jpg", categoria: "Tacos y Wraps", stock: 25 },
   { nombre: "Burrito Supremo", descripcion: "Tortilla gigante de harina rellena de carne, frijol y guacamole.", precio: 24000, imagen: "src/assets/burritoP.jpg", categoria: "Tacos y Wraps", stock: 10 },
   { nombre: "Wrap de Vegetales", descripcion: "Tortilla integral, hummus, vegetales asados y queso feta.", precio: 17000, imagen: "src/assets/wrapV.jpg", categoria: "Tacos y Wraps", stock: 14 },
-  { nombre: "Quesadilla de Pollo", descripcion: "Tortilla de trigo with queso fundido y pollo desmechado.", precio: 18500, imagen: "src/assets/quesadillas.jpg", categoria: "Tacos y Wraps", stock: 12 },
+  { nombre: "Quesadilla de Pollo", descripcion: "Tortilla de trigo con queso fundido y pollo desmechado.", precio: 18500, imagen: "src/assets/quesadillas.jpg", categoria: "Tacos y Wraps", stock: 12 },
   { nombre: "Arepa con Todo", descripcion: "Arepa de maiz rellena de carne, pollo, queso y huevo de codorniz.", precio: 15500, imagen: "src/assets/arepaT.jpg", categoria: "Tacos y Wraps", stock: 20 },
-  { nombre: "Costillas BBQ", descripcion: "Costillitas de cerdo banadas en salsa BBQ ahumada with papas.", precio: 45000, imagen: "src/assets/costillasB.jpg", categoria: "Platos Fuertes", stock: 8 },
-  { nombre: "Churrasco 300g", descripcion: "Corte de res a la parrilla with chimichurri artesanal.", precio: 42000, imagen: "src/assets/churrasco.jpg", categoria: "Platos Fuertes", stock: 7 },
+  { nombre: "Costillas BBQ", descripcion: "Costilas de cerdo bañadas en salsa BBQ ahumada con papas.", precio: 45000, imagen: "src/assets/costillasB.jpg", categoria: "Platos Fuertes", stock: 8 },
+  { nombre: "Churrasco 300g", descripcion: "Corte de res a la parrilla con chimichurri artesanal.", precio: 42000, imagen: "src/assets/churrasco.jpg", categoria: "Platos Fuertes", stock: 7 },
   { nombre: "Parrillada Mixta", descripcion: "Res, pollo, cerdo, chorizo y acompanamientos.", precio: 55000, imagen: "src/assets/parrilladaM.jpg", categoria: "Platos Fuertes", stock: 6 },
-  { nombre: "Arroz Atollado", descripcion: "Arroz humedo tipico with pollo, cerdo y longaniza.", precio: 28000, imagen: "src/assets/arrozA.jpg", categoria: "Platos Fuertes", stock: 10 },
+  { nombre: "Arroz Atollado", descripcion: "Arroz humedo tipico con pollo, cerdo y longaniza.", precio: 28000, imagen: "src/assets/arrozA.jpg", categoria: "Platos Fuertes", stock: 10 },
   { nombre: "Ceviche de Camaron", descripcion: "Camarones frescos marinados en limon citrico y cebolla roja.", precio: 35000, imagen: "src/assets/cevicheC.jpg", categoria: "Platos Fuertes", stock: 15 },
   { nombre: "Sushi Roll Filadelfia", descripcion: "Salmon, queso crema y aguacate, envuelto en sesamo.", precio: 30000, imagen: "src/assets/sushiR.jpg", categoria: "Platos Fuertes", stock: 20 },
   { nombre: "Poke de Atun", descripcion: "Atun marinado, mango, rabano y arroz de sushi.", precio: 31000, imagen: "src/assets/pokeA.jpg", categoria: "Platos Fuertes", stock: 12 },
   { nombre: "Bowl de Salmon", descripcion: "Base de quinoa, salmon fresco, edamame y aderezo ginger.", precio: 38000, imagen: "src/assets/bowlS.jpg", categoria: "Platos Fuertes", stock: 10 },
-  { nombre: "Filete de Pescado", descripcion: "Pescado blanco al ajillo with ensalada verde.", precio: 29000, imagen: "src/assets/fileteP.jpg", categoria: "Platos Fuertes", stock: 9 },
+  { nombre: "Filete de Pescado", descripcion: "Pescado blanco al ajillo con ensalada verde.", precio: 29000, imagen: "src/assets/fileteP.jpg", categoria: "Platos Fuertes", stock: 9 },
   { nombre: "Pizza Pepperoni", descripcion: "Masa artesanal, salsa de tomate italiana y doble pepperoni.", precio: 28000, imagen: "src/assets/pizzaP.jpg", categoria: "Platos Fuertes", stock: 15 },
-  { nombre: "Pasta Carbonara", descripcion: "Espagueti with salsa de huevo, queso pecorino y guanciale.", precio: 27000, imagen: "src/assets/pastaC.jpg", categoria: "Platos Fuertes", stock: 12 },
-  { nombre: "Lasana de Carne", descripcion: "Capas de pasta with bolonesa de la casa y salsa bechamel.", precio: 26000, imagen: "src/assets/lasañaC.jpg", categoria: "Platos Fuertes", stock: 10 },
+  { nombre: "Pasta Carbonara", descripcion: "Espagueti con salsa de huevo, queso pecorino y guanciale.", precio: 27000, imagen: "src/assets/pastaC.jpg", categoria: "Platos Fuertes", stock: 12 },
+  { nombre: "Lasana de Carne", descripcion: "Capas de pasta con bolonesa de la casa y salsa bechamel.", precio: 26000, imagen: "src/assets/lasañaC.jpg", categoria: "Platos Fuertes", stock: 10 },
   { nombre: "Ramen Tonkotsu", descripcion: "Caldo de cerdo, fideos frescos, huevo marinado y cerdo chashu.", precio: 33000, imagen: "src/assets/ramenT.jpg", categoria: "Platos Fuertes", stock: 8 },
-  { nombre: "Sopa de Tortilla", descripcion: "Caldo de tomate with tiras de tortilla, aguacate y crema.", precio: 15000, imagen: "src/assets/sopaT.jpg", categoria: "Platos Fuertes", stock: 20 },
+  { nombre: "Sopa de Tortilla", descripcion: "Caldo de tomate con tiras de tortilla, aguacate y crema.", precio: 15000, imagen: "src/assets/sopaT.jpg", categoria: "Platos Fuertes", stock: 20 },
   { nombre: "Ensalada de Pollo", descripcion: "Mix de lechugas, pechuga a la plancha, croutons y aderezo cesar.", precio: 22000, imagen: "src/assets/ensaladaP.jpg", categoria: "Platos Fuertes", stock: 15 },
-  { nombre: "Brownie con Helado", descripcion: "Postre de chocolate melcochudo with helado de vainilla.", precio: 12500, imagen: "src/assets/brownieH.jpg", categoria: "Postres", stock: 25 },
+  { nombre: "Brownie con Helado", descripcion: "Postre de chocolate melcochudo con helado de vainilla.", precio: 12500, imagen: "src/assets/brownieH.jpg", categoria: "Postres", stock: 25 },
   { nombre: "Limonada Cerezada", descripcion: "Refrescante mezcla de limon y cerezas maceradas.", precio: 12000, imagen: "src/assets/limonadaC.jpg", categoria: "Bebidas", stock: 50 },
   { nombre: "Jugo de Mango", descripcion: "Jugo natural de mango maduro, 100% fruta.", precio: 9500, imagen: "src/assets/jugoM.jpg", categoria: "Bebidas", stock: 40 },
-  { nombre: "Soda de Frutos Rojos", descripcion: "Soda artesanal with infusion de fresa, mora y arandanos.", precio: 13900, imagen: "src/assets/sodaF.jpg", categoria: "Bebidas", stock: 35 },
-  { nombre: "Malteada de Vainilla", descripcion: "Cremosa malteada with crema batida y chispas.", precio: 16500, imagen: "src/assets/malteadaV.jpg", categoria: "Bebidas", stock: 20 },
+  { nombre: "Soda de Frutos Rojos", descripcion: "Soda artesanal con infusion de fresa, mora y arandanos.", precio: 13900, imagen: "src/assets/sodaF.jpg", categoria: "Bebidas", stock: 35 },
+  { nombre: "Malteada de Vainilla", descripcion: "Cremosa malteada con crema batida y chispas.", precio: 16500, imagen: "src/assets/malteadaV.jpg", categoria: "Bebidas", stock: 20 },
   { nombre: "Vino Tinto (Copa)", descripcion: "Seleccion de la casa, ideal para carnes rojas.", precio: 18000, imagen: "src/assets/copaV.jpg", categoria: "Bebidas", stock: 15 },
-  { nombre: "Cheesecake de Oreo", descripcion: "Postre cremoso de queso with trozos de galleta negra.", precio: 15000, imagen: "src/assets/oreoC.jpg", categoria: "Postres", stock: 12 },
-  { nombre: "Tarta de Manzana", descripcion: "Tarta horneada with canela y helado de vainilla.", precio: 14000, imagen: "src/assets/tartaM.jpg", categoria: "Postres", stock: 10 },
-  { nombre: "Salmon Teriyaki", descripcion: "Salmon glaseado en salsa dulce with vegetales salteados.", precio: 49000, imagen: "src/assets/salmonT.jpg", categoria: "Platos Fuertes", stock: 15 },
-  { nombre: "Lomo a la Pimienta", descripcion: "Corte premium de res with salsa cremosa de pimienta.", precio: 54000, imagen: "src/assets/lomoP.jpg", categoria: "Platos Fuertes", stock: 10 },
-  { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso with variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
-]);
+  { nombre: "Cheesecake de Oreo", descripcion: "Postre cremoso de queso con trozos de galleta oreo.", precio: 15000, imagen: "src/assets/oreoC.jpg", categoria: "Postres", stock: 12 },
+  { nombre: "Tarta de Manzana", descripcion: "Tarta horneada con canela y helado de vainilla.", precio: 14000, imagen: "src/assets/tartaM.jpg", categoria: "Postres", stock: 10 },
+  { nombre: "Salmon Teriyaki", descripcion: "Salmon glaseado en salsa dulce con vegetales salteados.", precio: 49000, imagen: "src/assets/salmonT.jpg", categoria: "Platos Fuertes", stock: 15 },
+  { nombre: "Lomo a la Pimienta", descripcion: "Corte premium de res con salsa cremosa de pimienta.", precio: 54000, imagen: "src/assets/lomoP.jpg", categoria: "Platos Fuertes", stock: 10 },
+  { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso con variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
+];
+
+const platosGuardados = localStorage.getItem('platos_bistro');
+const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOS_POR_DEFECTO);
 
 const categorias = ref(["Todas", "Rapidas", "Snacks", "Tacos y Wraps", "Platos Fuertes", "Bebidas", "Postres"]);
 const categoriaSeleccionada = ref("Todas");
@@ -246,6 +314,69 @@ const propinaPorcentaje = ref(0);
 const cliente = ref({ nombre: '', mesa: '', metodoPago: '', notas: '' });
 const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
 const textoBusqueda = ref("");
+
+// --- NUEVO ESTADO PARA PRODUCTOS ---
+const mostrarFormPlato = ref(false);
+const editandoPlatoNombre = ref(null);
+const menuAbierto = ref(null);
+const formPlato = ref({
+  nombre: '',
+  descripcion: '',
+  precio: 0,
+  imagen: '',
+  categoria: 'Rapidas',
+  stock: 0
+});
+
+function abrirFormPlato(plato = null) {
+  if (plato) {
+    editandoPlatoNombre.value = plato.nombre;
+    formPlato.value = { ...plato };
+  } else {
+    editandoPlatoNombre.value = null;
+    formPlato.value = {
+      nombre: '',
+      descripcion: '',
+      precio: 0,
+      imagen: '',
+      categoria: 'Rapidas',
+      stock: 0
+    };
+  }
+  mostrarFormPlato.value = true;
+  menuAbierto.value = null;
+}
+
+function cerrarFormPlato() {
+  mostrarFormPlato.value = false;
+}
+
+function manejarArchivo(evento) {
+  const archivo = evento.target.files[0];
+  if (archivo) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      formPlato.value.imagen = e.target.result;
+    };
+    reader.readAsDataURL(archivo);
+  }
+}
+
+function toggleMenu(nombre) {
+  menuAbierto.value = menuAbierto.value === nombre ? null : nombre;
+}
+
+function guardarPlatosEnStorage() {
+  // Guardamos el catalogo compensando el stock que esta actualmente en el carrito
+  const platosParaGuardar = platos.value.map(p => {
+    const itemEnCarrito = carrito.value.find(c => c.nombre === p.nombre);
+    return {
+      ...p,
+      stock: p.stock + (itemEnCarrito ? itemEnCarrito.cantidad : 0)
+    };
+  });
+  localStorage.setItem('platos_bistro', JSON.stringify(platosParaGuardar));
+}
 
 // ========================================
 // 2. PERSISTENCIA - Cargar datos guardados
@@ -317,6 +448,49 @@ function cantidadEnCarrito(nombre) {
 // ========================================
 // 4. ACCIONES DEL USUARIO
 // ========================================
+
+function guardarPlato() {
+  const { nombre, descripcion, precio, imagen, categoria, stock } = formPlato.value;
+  if (!nombre || !descripcion || !precio || !imagen || !categoria) {
+    return Swal.fire('Error', 'Todos los campos son obligatorios', 'error');
+  }
+
+  if (editandoPlatoNombre.value) {
+    const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
+    if (index !== -1) {
+      platos.value[index] = { ...formPlato.value };
+    }
+  } else {
+    if (platos.value.find(p => p.nombre === nombre)) {
+      return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
+    }
+    platos.value.push({ ...formPlato.value });
+  }
+
+  cerrarFormPlato();
+  guardarPlatosEnStorage();
+  aplicarFiltros();
+  Swal.fire('¡Éxito!', editandoPlatoNombre.value ? 'Producto actualizado' : 'Producto agregado', 'success');
+}
+
+function eliminarPlato(nombre) {
+  Swal.fire({
+    title: '¿Eliminar producto?',
+    text: "Esta acción no se puede deshacer",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#FF4D4D',
+    cancelButtonColor: '#011627',
+    confirmButtonText: 'Sí, eliminar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      platos.value = platos.value.filter(p => p.nombre !== nombre);
+      guardarPlatosEnStorage();
+      aplicarFiltros();
+      Swal.fire('Eliminado', 'El producto ha sido eliminado', 'success');
+    }
+  });
+}
 
 function agregarAlCarrito(producto) {
   // Validar stock disponible
@@ -548,6 +722,8 @@ function finalizarPedido() {
       carrito.value = [];
       cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
       propinaPorcentaje.value = 0;
+      // Guardamos el stock actualizado (ya sin los items vendidos) en el almacenamiento permanente
+      localStorage.setItem('platos_bistro', JSON.stringify(platos.value));
       if (typeof actualizarTotales === 'function') actualizarTotales();
       if (typeof cerrarModal === 'function') cerrarModal();
     });
