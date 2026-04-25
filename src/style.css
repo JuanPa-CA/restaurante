@@ -473,7 +473,7 @@ body:has(.modal-overlay) {
 }
 
 .vacia-sub {
-  font-size: 25px;
+  font-size: 30px;
   color: var(--color-oscuro);
   font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
 }

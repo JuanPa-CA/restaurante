@@ -2,7 +2,7 @@
   <div id="app">
     <!-- Header -->
     <header>
-      <h1>bristo y brasa</h1>
+      <h1>RESTAURANTE BRISTO</h1>
       <button class="btn-pedido" v-on:click="abrirModal">
         <span>{{ carrito.length > 0 ? 'Mi Carrito ' : 'CARRITO' }}</span>
         <span class="badge-carrito">{{ totalUnidades }}</span>
@@ -21,7 +21,7 @@
         </button>
       </template>
     </nav>
-
+    
     <!-- Grid de Productos -->
     <main>
       <div class="grid-productos">
@@ -61,7 +61,7 @@
       <div class="factura-box">
         <div class="factura-header">
           <h2>SU CUENTA</h2>
-          <p>Bistro & Brasa - Mesa #{{ cliente.mesa || ' ' }}</p>
+          <p>Restaurante Bistro - Mesa #{{ cliente.mesa || ' ' }}</p>
           <button v-on:click="cerrarModal" class="btn-cerrar-x">x</button>
         </div>
 
@@ -101,7 +101,7 @@
 
             <div class="form-field">
               <label>NOMBRE DEL CLIENTE</label>
-              <input type="text" v-model="cliente.nombre" placeholder="Ej: Juan Perez">
+              <input type="text" v-model="cliente.nombre" placeholder="Juan Perez">
             </div>
 
             <div class="form-grid-2">
@@ -121,7 +121,7 @@
 
             <div class="form-field">
               <label>INSTRUCCIONES ESPECIALES</label>
-              <textarea v-model="cliente.notas" rows="2" placeholder="Ej: Sin cebolla, termino medio"></textarea>
+              <textarea v-model="cliente.notas" rows="2" placeholder="Sin cebolla, termino medio"></textarea>
             </div>
 
             <!-- Propina -->
@@ -172,8 +172,8 @@
 
     <!-- Footer -->
     <footer>
-      <h2 class="footer-logo">BISTRO & BRASA</h2>
-      <p class="footer-info">Calle de los Sabores #123 - Abierto de 12pm a 10pm</p>
+      <h2 class="footer-logo">RESTAURANTE BISTRO</h2>
+      <p class="footer-info">Calle de los Sabores #123 - Abierto de 8am a 7pm</p>
     </footer>
   </div>
 </template>
@@ -226,7 +226,7 @@ const platos = ref([
   { nombre: "Tarta de Manzana", descripcion: "Tarta horneada with canela y helado de vainilla.", precio: 14000, imagen: "src/assets/tartaM.jpg", categoria: "Postres", stock: 10 },
   { nombre: "Salmon Teriyaki", descripcion: "Salmon glaseado en salsa dulce with vegetales salteados.", precio: 49000, imagen: "src/assets/salmonT.jpg", categoria: "Platos Fuertes", stock: 15 },
   { nombre: "Lomo a la Pimienta", descripcion: "Corte premium de res with salsa cremosa de pimienta.", precio: 54000, imagen: "src/assets/lomoP.jpg", categoria: "Platos Fuertes", stock: 10 },
-  { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso with variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 8 },
+  { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso with variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
 ]);
 
 const categorias = ref(["Todas", "Rapidas", "Snacks", "Tacos y Wraps", "Platos Fuertes", "Bebidas", "Postres"]);
@@ -492,7 +492,6 @@ function finalizarPedido() {
   win.document.write(`
     <html>
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@400;800&display=swap" rel="stylesheet">
         <style>
           body { font-family: 'Lexend', sans-serif; color: #011627; padding: 30px; line-height: 1.4; }
           .ticket { border: 4px solid #011627; padding: 25px; box-shadow: 8px 8px 0 #011627; max-width: 500px; margin: auto; }
@@ -504,7 +503,7 @@ function finalizarPedido() {
       </head>
       <body>
         <div class="ticket">
-          <h1>BISTRO Y BRASA</h1>
+          <h1>RESTAURANTE BRISTO</h1>
           
           <div class="info-cliente">
             <p><strong>MESA:</strong> ${mesa} | <strong>CLIENTE:</strong> ${nombre}</p>
@@ -522,7 +521,7 @@ function finalizarPedido() {
 
           ${notasHtml}
           
-          <p style="text-align:center; margin-top:20px; font-size:0.8em; font-weight:800;">¡GRACIAS POR TU COMPRA!</p>
+          <p style="text-align:center; margin-top:20px; font-size:0.8em; font-weight:800;">¡GRACIAS POR SU COMPRA!</p>
         </div>
       </body>
     </html>
