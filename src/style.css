@@ -192,6 +192,50 @@ header .btn-pedido {
   animation: none;
 }
 
+
+
+
+.contenedor-busqueda {
+  display: flex;
+  justify-content: flex-end; /* Alinea a la derecha */
+  padding: 1rem var(--page-padding);
+  margin-bottom: 1rem;
+}
+
+.input-busqueda {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.8rem 1.2rem;
+  font-family: var(--fuente-main);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-oscuro);
+  background-color: #fff;
+  border: 3px solid var(--color-oscuro);
+  border-radius: var(--border-radius);
+  box-shadow: 4px 4px 0px var(--color-oscuro);
+  
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input-busqueda:focus {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0px var(--color-oscuro);
+  border-color: var(--color-secundario);
+}
+
+/* Estilo del placeholder */
+.input-busqueda::placeholder {
+  color: #888;
+  font-weight: 400;
+}
+
+
+
+
+
+
 main {
   padding: clamp(1.25rem, 4vw, 3rem) var(--page-padding) clamp(2rem, 5vw, 4rem);
   flex-grow: 1;

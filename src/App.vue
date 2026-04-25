@@ -7,6 +7,7 @@
         <span>{{ carrito.length > 0 ? 'Mi Carrito ' : 'CARRITO' }}</span>
         <span class="badge-carrito">{{ totalUnidades }}</span>
       </button>
+
     </header>
 
     <!-- Barra de Categorias -->
@@ -21,7 +22,13 @@
         </button>
       </template>
     </nav>
-    
+
+    <!--Barra de busqueda-->
+    <div class="contenedor-busqueda">
+      <input type="text" placeholder="¿Que plato buscas?" v-model="textoBusqueda" v-on:input="aplicarFiltros"
+        class="input-busqueda">
+    </div>
+
     <!-- Grid de Productos -->
     <main>
       <div class="grid-productos">
@@ -238,6 +245,7 @@ const totalUnidades = ref(0);
 const propinaPorcentaje = ref(0);
 const cliente = ref({ nombre: '', mesa: '', metodoPago: '', notas: '' });
 const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
+const textoBusqueda = ref("");
 
 // ========================================
 // 2. PERSISTENCIA - Cargar datos guardados
@@ -282,20 +290,19 @@ function actualizarTotales() {
 // Inicializar totales al cargar
 actualizarTotales();
 
+
+function aplicarFiltros() {
+  const prefijo = textoBusqueda.value.toLowerCase().trim();
+  platosFiltrados.value = platos.value.filter(plato => {
+    const coincideCategoria = categoriaSeleccionada.value === "Todas" || plato.categoria === categoriaSeleccionada.value;
+    const coincideNombre = plato.nombre.toLowerCase().startsWith(prefijo);
+    return coincideCategoria && coincideNombre;
+  });
+}
+
 function filtrarPlatos(categoria) {
   categoriaSeleccionada.value = categoria;
-
-  if (categoria === "Todas") {
-    platosFiltrados.value = [...platos.value];
-  } else {
-    const nuevosPlatos = [];
-    for (let i = 0; i < platos.value.length; i++) {
-      if (platos.value[i].categoria === categoria) {
-        nuevosPlatos.push(platos.value[i]);
-      }
-    }
-    platosFiltrados.value = nuevosPlatos;
-  }
+  aplicarFiltros();
 }
 
 function cantidadEnCarrito(nombre) {
@@ -477,15 +484,15 @@ function finalizarPedido() {
       <td style="padding:8px; border-bottom:2px solid #011627; text-align:right;">$${(i.precio * i.cantidad).toLocaleString()}</td>
     </tr>`).join('');
 
-  const propinaHtml = propinaPorcentaje.value > 0 
-    ? `<div style="display:flex; justify-content:space-between;"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>` 
+  const propinaHtml = propinaPorcentaje.value > 0
+    ? `<div style="display:flex; justify-content:space-between;"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
     : '';
 
   // Bloque para las notas solo si el cliente escribió algo
-  const notasHtml = notas 
+  const notasHtml = notas
     ? `<div style="margin-top:15px; padding:10px; border:2px dashed #011627; font-size:0.9em;">
         <strong>NOTAS:</strong> ${notas}
-       </div>` 
+       </div>`
     : '';
 
   const win = window.open('', '_blank');
