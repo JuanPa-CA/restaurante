@@ -62,7 +62,7 @@
         </div>
       </div>
     </main>
-
+    
     <!-- Modal Factura -->
     <div v-if="mostrarModal" class="modal-overlay" v-on:click="cerrarSiEsFuera">
       <div class="factura-box">
