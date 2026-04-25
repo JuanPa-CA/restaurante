@@ -10,12 +10,11 @@
   --fuente-main: 'Lexend', sans-serif;
   --border-radius: 16px;
   --shadow: 8px 8px 0px var(--color-oscuro);
-  --page-padding: clamp(0.75rem, 4vw, 1rem);
+  --page-padding: clamp(1rem, 5vw, 2.5rem);
   --header-height: 80px;
-  --header-accent-height: 3px;
-  --category-height: 46px;
-  --category-pill-height: 32px;
-  --grid-min: 100%;
+  --header-accent-height: 4px;
+  --category-height: auto;
+  --grid-min: 260px;
   --modal-max-width: 100%;
   --card-image-ratio: 16 / 10;
 }
@@ -34,7 +33,7 @@ body {
   overflow-x: hidden;
 
 
-  background-image: url('src/assets/fondo.jpg');
+  background-image: url('./assets/fondo.jpg');
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -157,6 +156,22 @@ header .btn-pedido {
   header .btn-pedido {
     flex: 1;
     max-width: 200px;
+  }
+
+  /* Reducir tamaño de búsqueda en móvil */
+  .contenedor-busqueda {
+    padding: 0.75rem var(--page-padding);
+  }
+
+  .input-busqueda {
+    padding: 0.65rem 1rem 0.65rem 2.5rem;
+    font-size: 0.95rem;
+    border-width: 3px;
+  }
+
+  .icon-busqueda {
+    left: 0.8rem;
+    font-size: 1rem;
   }
 }
 
@@ -367,16 +382,6 @@ header .btn-pedido {
   background: #ffe5e5;
 }
 
-/* Formulario Producto Styling */
-.formulario-producto {
-  height: auto !important;
-  max-height: 90vh;
-  margin: auto;
-  border-radius: 24px;
-  border: 5px solid var(--color-oscuro);
-  overflow: hidden;
-}
-
 .upload-wrapper {
   display: flex;
   flex-direction: column;
@@ -404,20 +409,18 @@ header .btn-pedido {
   object-fit: cover;
 }
 
-
-
-
-
-
 main {
-  padding: clamp(1.25rem, 4vw, 3rem) var(--page-padding) clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.5rem, 5vw, 3rem) var(--page-padding);
   flex-grow: 1;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .grid-productos {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--grid-min)), 1fr));
-  gap: clamp(1rem, 2vw, 2.5rem);
+  gap: clamp(1rem, 3vw, 2rem);
   align-items: stretch;
 }
 
@@ -586,10 +589,18 @@ body:has(.modal-overlay) {
   width: min(100%, var(--modal-max-width));
   background: var(--color-fondo);
   height: 100dvh;
-  border-left: none;
+  border-left: 6px solid var(--color-oscuro);
   display: flex;
   flex-direction: column;
   animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: -10px 0 30px rgba(0,0,0,0.2);
+}
+
+.formulario-producto {
+  height: auto;
+  max-height: 90vh;
+  border-radius: 20px 0 0 20px;
+  align-self: center;
 }
 
 .factura-header {
@@ -667,8 +678,8 @@ body:has(.modal-overlay) {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  background-image: url('src/assets/fondo2.jpg');
-  background-size: fill;
+  background-image: url('./assets/fondo2.jpg');
+  background-size: cover;
 }
 
 .factura-vacia {
@@ -676,23 +687,43 @@ body:has(.modal-overlay) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
-  min-height: 55%;
+  gap: 1rem;
+  margin: auto;
+  padding: 3rem 2rem;
   text-align: center;
-
+  background: white;
+  border: 4px solid var(--color-oscuro);
+  border-radius: 24px;
+  box-shadow: 10px 10px 0px var(--color-oscuro);
+  max-width: 90%;
 }
-
 
 .factura-vacia::before {
   content: '🥘';
-  font-size: clamp(5rem, 18vw, 10rem);
-  animation: bounce 10s infinite;
+  font-size: clamp(4rem, 15vw, 6rem);
+  animation: bounce 3s infinite ease-in-out;
+  filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.1));
 }
 
 .vacia-sub {
-  font-size: 30px;
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
   color: var(--color-oscuro);
-  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.vacia-sub:last-of-type {
+  font-weight: 400;
+  font-size: 1rem;
+  opacity: 0.8;
+  margin-bottom: 0.5rem;
+}
+
+.factura-vacia .btn-pedido {
+  margin-top: 1rem;
+  width: 100%;
+  max-width: 200px;
 }
 
 .items-header {
@@ -1323,14 +1354,107 @@ footer {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-
-  *,
-  ::before,
-  ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+/* --- ESTILOS DE IMPRESIÓN (TICKET) --- */
+@media print {
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: white !important;
   }
+  body * {
+    visibility: hidden;
+  }
+  #ticket-impresion, #ticket-impresion * {
+    visibility: visible;
+  }
+  #ticket-impresion {
+    position: relative;
+    left: 0;
+    top: 0;
+    margin: 20px auto;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: none; /* Quitamos sombra en impresión real para ahorrar tinta/limpieza */
+  }
+}
+
+.ticket-container {
+  font-family: 'Lexend', sans-serif;
+  color: #011627;
+  line-height: 1.4;
+  padding: 25px;
+  width: 95%;
+  max-width: 400px;
+  margin: 40px auto;
+  border: 4px solid #011627;
+  box-shadow: 8px 8px 0 #011627;
+  background: white;
+}
+
+.ticket-header {
+  font-family: 'Bungee';
+  color: #FF4D4D;
+  text-align: center;
+  margin: 0 0 10px;
+  font-size: 1.8em;
+}
+
+.ticket-info-cliente {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #011627;
+  font-size: 0.9em;
+}
+
+.ticket-metodo-pago {
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #2EC4B6;
+  margin-top: 5px;
+  display: block;
+}
+
+.ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.ticket-table td {
+  padding: 8px;
+  border-bottom: 2px solid #011627;
+}
+
+.ticket-totales {
+  margin-top: 15px;
+}
+
+.ticket-linea-total {
+  display: flex;
+  justify-content: space-between;
+}
+
+.ticket-total-grande {
+  font-weight: 800;
+  font-size: 1.4em;
+  border-top: 4px solid #011627;
+  padding-top: 10px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ticket-notas {
+  margin-top: 15px;
+  padding: 10px;
+  border: 2px dashed #011627;
+  font-size: 0.9em;
+}
+
+.ticket-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.8em;
+  font-weight: 800;
 }

@@ -68,7 +68,7 @@
             <button v-if="producto.stock > 0" class="btn-pedido btn-full" v-on:click="agregarAlCarrito(producto)">
               {{ cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR' }}
             </button>
-            <button v-else class="btn-pedido btn-full btn-desactivado">
+            <button v-else class="btn-pedido btn-full btn-desactivado" v-on:click="agregarAlCarrito(producto)">
               SIN STOCK
             </button>
           </div>
@@ -106,7 +106,7 @@
             <div class="form-field">
               <label>CATEGORÍA</label>
               <select v-model="formPlato.categoria">
-                <option v-for="cat in categorias.filter(c => c !== 'Todas')" :value="cat">{{ cat }}</option>
+                <option v-for="categoria in categorias.filter(c => c !== 'Todas')" :value="categoria">{{ categoria }}</option>
               </select>
             </div>
             <div class="form-field">
@@ -127,7 +127,7 @@
       </div>
     </div>
 
-    
+
     <!-- Modal Factura -->
     <div v-if="mostrarModal" class="modal-overlay" v-on:click="cerrarSiEsFuera">
       <div class="factura-box">
@@ -141,9 +141,9 @@
 
           <!-- Carrito vacio -->
           <div v-if="carrito.length === 0" class="factura-vacia">
-            <p class="vacia-sub">Su carrito esta vacio.</p>
-            <p class="vacia-sub">Agregue platos desde el menu.</p>
-            <button class="btn-pedido btn-oscuro" v-on:click="cerrarModal">VER MENU</button>
+            <p class="vacia-sub">¡Tu carrito está vacío!</p>
+            <p class="vacia-sub">Parece que aún no has elegido nada.</p>
+            <button class="btn-pedido btn-oscuro" v-on:click="cerrarModal">EXPLORAR MENÚ</button>
           </div>
 
           <!-- Encabezado de items -->
@@ -258,7 +258,7 @@ import Swal from 'sweetalert2';
 // ========================================
 // 1. ESTADO REACTIVO
 // ========================================
-const PLATOS_POR_DEFECTO = [
+const PLATOSINICIO = [
   { nombre: "Hamburguesa Especial", descripcion: "Carne angus 200g, queso cheddar, tocino y vegetales frescos.", precio: 25000, imagen: "src/assets/hamburguesaE.jpg", categoria: "Rapidas", stock: 8 },
   { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
   { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapeños, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
@@ -301,8 +301,8 @@ const PLATOS_POR_DEFECTO = [
   { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso con variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
 ];
 
-const platosGuardados = localStorage.getItem('platos_bistro');
-const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOS_POR_DEFECTO);
+const platosGuardados = localStorage.getItem('platosbristo');
+const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOSINICIO);
 
 const categorias = ref(["Todas", "Rapidas", "Snacks", "Tacos y Wraps", "Platos Fuertes", "Bebidas", "Postres"]);
 const categoriaSeleccionada = ref("Todas");
@@ -355,8 +355,8 @@ function manejarArchivo(evento) {
   const archivo = evento.target.files[0];
   if (archivo) {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      formPlato.value.imagen = e.target.result;
+    reader.onload = (evento) => {
+      formPlato.value.imagen = evento.target.result;
     };
     reader.readAsDataURL(archivo);
   }
@@ -366,27 +366,21 @@ function toggleMenu(nombre) {
   menuAbierto.value = menuAbierto.value === nombre ? null : nombre;
 }
 
-function guardarPlatosEnStorage() {
-  // Guardamos el catalogo compensando el stock que esta actualmente en el carrito
-  const platosParaGuardar = platos.value.map(p => {
+function platosStorage() {
+  const platosGuardar = platos.value.map(p => {
     const itemEnCarrito = carrito.value.find(c => c.nombre === p.nombre);
     return {
       ...p,
       stock: p.stock + (itemEnCarrito ? itemEnCarrito.cantidad : 0)
     };
   });
-  localStorage.setItem('platos_bistro', JSON.stringify(platosParaGuardar));
+  localStorage.setItem('platosbristo', JSON.stringify(platosGuardar));
 }
 
-// ========================================
-// 2. PERSISTENCIA - Cargar datos guardados
-// ========================================
 const datosGuardados = localStorage.getItem('carrito_bistro');
 if (datosGuardados) {
   const guardado = JSON.parse(datosGuardados);
   carrito.value = guardado;
-
-  // Ajustar stock inicial basado en lo guardado
   guardado.forEach(itemCarrito => {
     const plato = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
     if (plato) {
@@ -395,32 +389,22 @@ if (datosGuardados) {
   });
 }
 
-// ========================================
-// 3. FUNCIONES DE CÁLCULO MANUAL
-// ========================================
-
 function actualizarTotales() {
   let subtotal = 0;
   let unidades = 0;
-
   for (let i = 0; i < carrito.value.length; i++) {
     subtotal += carrito.value[i].precio * carrito.value[i].cantidad;
     unidades += carrito.value[i].cantidad;
   }
-
   totalUnidades.value = unidades;
   totales.value.subtotal = subtotal;
   totales.value.iva = subtotal * 0.19;
   totales.value.propina = subtotal * (propinaPorcentaje.value / 100);
   totales.value.total = totales.value.subtotal + totales.value.iva + totales.value.propina;
-
-  // Guardar en localStorage
   localStorage.setItem('carrito_bistro', JSON.stringify(carrito.value));
 }
 
-// Inicializar totales al cargar
 actualizarTotales();
-
 
 function aplicarFiltros() {
   const prefijo = textoBusqueda.value.toLowerCase().trim();
@@ -438,37 +422,25 @@ function filtrarPlatos(categoria) {
 
 function cantidadEnCarrito(nombre) {
   for (let i = 0; i < carrito.value.length; i++) {
-    if (carrito.value[i].nombre === nombre) {
-      return carrito.value[i].cantidad;
-    }
+    if (carrito.value[i].nombre === nombre) return carrito.value[i].cantidad;
   }
   return 0;
 }
-
-// ========================================
-// 4. ACCIONES DEL USUARIO
-// ========================================
 
 function guardarPlato() {
   const { nombre, descripcion, precio, imagen, categoria, stock } = formPlato.value;
   if (!nombre || !descripcion || !precio || !imagen || !categoria) {
     return Swal.fire('Error', 'Todos los campos son obligatorios', 'error');
   }
-
   if (editandoPlatoNombre.value) {
     const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
-    if (index !== -1) {
-      platos.value[index] = { ...formPlato.value };
-    }
+    if (index !== -1) platos.value[index] = { ...formPlato.value };
   } else {
-    if (platos.value.find(p => p.nombre === nombre)) {
-      return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
-    }
+    if (platos.value.find(producto => producto.nombre === nombre)) return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
     platos.value.push({ ...formPlato.value });
   }
-
   cerrarFormPlato();
-  guardarPlatosEnStorage();
+  platosStorage();
   aplicarFiltros();
   Swal.fire('¡Éxito!', editandoPlatoNombre.value ? 'Producto actualizado' : 'Producto agregado', 'success');
 }
@@ -484,8 +456,8 @@ function eliminarPlato(nombre) {
     confirmButtonText: 'Sí, eliminar'
   }).then((result) => {
     if (result.isConfirmed) {
-      platos.value = platos.value.filter(p => p.nombre !== nombre);
-      guardarPlatosEnStorage();
+      platos.value = platos.value.filter(producto => producto.nombre !== nombre);
+      platosStorage();
       aplicarFiltros();
       Swal.fire('Eliminado', 'El producto ha sido eliminado', 'success');
     }
@@ -493,17 +465,7 @@ function eliminarPlato(nombre) {
 }
 
 function agregarAlCarrito(producto) {
-  // Validar stock disponible
-  if (producto.stock <= 0) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Sin stock',
-      text: 'Lo sentimos, este producto se ha agotado.'
-    });
-    return;
-  }
-
-  // Buscar si el producto ya existe en el carrito
+  if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.' });
   let item = null;
   for (let i = 0; i < carrito.value.length; i++) {
     if (carrito.value[i].nombre === producto.nombre) {
@@ -511,116 +473,41 @@ function agregarAlCarrito(producto) {
       break;
     }
   }
-
-  // Si ya existe, aumentar cantidad (máximo 3)
   if (item) {
-    if (item.cantidad >= 3) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Límite alcanzado',
-        text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.',
-        confirmButtonColor: '#E76F51'
-      });
-      return;
-    }
+    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51' });
     item.cantidad++;
   } else {
-    // Si no existe, agregarlo con cantidad 1
-    carrito.value.push({
-      nombre: producto.nombre,
-      precio: producto.precio,
-      cantidad: 1,
-      categoria: producto.categoria
-    });
+    carrito.value.push({ nombre: producto.nombre, precio: producto.precio, cantidad: 1, categoria: producto.categoria });
   }
-
-  // Reducir stock del producto original
   producto.stock--;
-
-  // Notificación de éxito
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: '¡Agregado!',
-    showConfirmButton: false,
-    timer: 1000,
-    background: '#2A9D8F',
-    color: '#fff'
-  });
-
+  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '¡Agregado!', showConfirmButton: false, timer: 1000, background: '#2A9D8F', color: '#fff' });
   actualizarTotales();
 }
 
 function cambiarCantidad(index, valor) {
   const itemCarrito = carrito.value[index];
-
-  // Buscar el producto original para devolver o quitar stock
-  let productoOriginal = null;
-  for (let i = 0; i < platos.value.length; i++) {
-    if (platos.value[i].nombre === itemCarrito.nombre) {
-      productoOriginal = platos.value[i];
-      break;
-    }
-  }
-
+  let productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
   if (valor > 0) {
-    // Aumentar cantidad
-    if (itemCarrito.cantidad >= 3) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Límite alcanzado',
-        text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.',
-        confirmButtonColor: '#E76F51'
-      });
-      return;
-    }
-    if (productoOriginal.stock <= 0) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Sin stock',
-        text: 'No hay más unidades disponibles.'
-      });
-      return;
-    }
+    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51' });
+    if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.' });
     itemCarrito.cantidad++;
     productoOriginal.stock--;
   } else {
-    // Disminuir cantidad
     itemCarrito.cantidad--;
     productoOriginal.stock++;
-
-    // Si la cantidad llega a 0, eliminar del carrito
-    if (itemCarrito.cantidad <= 0) {
-      carrito.value.splice(index, 1);
-    }
+    if (itemCarrito.cantidad <= 0) carrito.value.splice(index, 1);
   }
-
   actualizarTotales();
 }
 
 function vaciarCarrito() {
-  Swal.fire({
-    icon: 'warning',
-    title: '¿Vaciar carrito?',
-    text: 'Perderás el progreso de la compra',
-    showCancelButton: true,
-    confirmButtonText: 'Vaciar carrito',
-    confirmButtonColor: '#E76F51'
-  }).then(function (resultado) {
+  Swal.fire({ icon: 'warning', title: '¿Vaciar carrito?', text: 'Perderás el progreso de la compra', showCancelButton: true, confirmButtonText: 'Vaciar carrito', confirmButtonColor: '#E76F51' }).then(function (resultado) {
     if (resultado.isConfirmed) {
-      // Devolver stock a todos los productos antes de vaciar
       for (let i = 0; i < carrito.value.length; i++) {
         const itemCarrito = carrito.value[i];
-        const platoOriginal = platos.value.find(function (producto) {
-          return producto.nombre === itemCarrito.nombre;
-        });
-
-        if (platoOriginal) {
-          platoOriginal.stock += itemCarrito.cantidad;
-        }
+        const platoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
+        if (platoOriginal) platoOriginal.stock += itemCarrito.cantidad;
       }
-
       carrito.value = [];
       actualizarTotales();
     }
@@ -632,101 +519,77 @@ function seleccionarPropina(valor) {
   actualizarTotales();
 }
 
-function abrirModal() {
-  mostrarModal.value = true;
-}
-
-function cerrarModal() {
-  mostrarModal.value = false;
-}
-
-function cerrarSiEsFuera(evento) {
-  if (evento.target.classList.contains('modal-overlay')) {
-    cerrarModal();
-  }
-}
+function abrirModal() { mostrarModal.value = true; }
+function cerrarModal() { mostrarModal.value = false; }
+function cerrarSiEsFuera(evento) { if (evento.target.classList.contains('modal-overlay')) cerrarModal(); }
 
 function finalizarPedido() {
   const { nombre, mesa, metodoPago, notas } = cliente.value;
-
   if (!carrito.value.length) return Swal.fire('Error', 'Carrito vacío', 'error');
   if (!nombre || !mesa || !metodoPago) return Swal.fire('Atención', 'Completa tus datos', 'info');
 
-  const filas = carrito.value.map(i => `
-    <tr>
-      <td style="padding:8px; border-bottom:2px solid #011627;">${i.nombre} x${i.cantidad}</td>
-      <td style="padding:8px; border-bottom:2px solid #011627; text-align:right;">$${(i.precio * i.cantidad).toLocaleString()}</td>
-    </tr>`).join('');
+  Swal.fire({
+    title: 'PROCESANDO PAGO',
+    html: 'Procesando',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); },
+    timer: 2000,
+    timerProgressBar: true,
+  }).then(() => {
+    const filas = carrito.value.map(i => `
+      <tr>
+        <td>${i.nombre} x${i.cantidad}</td>
+        <td style="text-align:right;">$${(i.precio * i.cantidad).toLocaleString()}</td>
+      </tr>`).join('');
 
-  const propinaHtml = propinaPorcentaje.value > 0
-    ? `<div style="display:flex; justify-content:space-between;"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
-    : '';
+    const propinaHtml = propinaPorcentaje.value > 0 ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>` : '';
+    const notasHtml = notas ? `<div class="ticket-notas"><strong>NOTAS:</strong> ${notas}</div>` : '';
 
-  // Bloque para las notas solo si el cliente escribió algo
-  const notasHtml = notas
-    ? `<div style="margin-top:15px; padding:10px; border:2px dashed #011627; font-size:0.9em;">
-        <strong>NOTAS:</strong> ${notas}
-       </div>`
-    : '';
-
-  const win = window.open('', '_blank');
-  win.document.write(`
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Lexend', sans-serif; color: #011627; padding: 30px; line-height: 1.4; }
-          .ticket { border: 4px solid #011627; padding: 25px; box-shadow: 8px 8px 0 #011627; max-width: 500px; margin: auto; }
-          h1 { font-family: 'Bungee'; color: #FF4D4D; text-align: center; margin: 0 0 10px; font-size: 2em; }
-          .info-cliente { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #011627; font-size: 0.95em; }
-          .total { font-weight: 800; font-size: 1.5em; border-top: 4px solid #011627; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
-          .metodo-pago { text-transform: uppercase; font-weight: 800; color: #2EC4B6; margin-top: 5px; display: block; }
-        </style>
-      </head>
-      <body>
-        <div class="ticket">
-          <h1>RESTAURANTE BRISTO</h1>
-          
-          <div class="info-cliente">
-            <p><strong>MESA:</strong> ${mesa} | <strong>CLIENTE:</strong> ${nombre}</p>
-            <span class="metodo-pago">PAGO: ${metodoPago}</span>
-          </div>
-
-          <table style="width:100%; border-collapse:collapse;">${filas}</table>
-          
-          <div style="margin-top:15px;">
-            <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>$${totales.value.subtotal.toLocaleString()}</span></div>
-            <div style="display:flex; justify-content:space-between;"><span>IVA (19%):</span><span>$${totales.value.iva.toLocaleString()}</span></div>
-            ${propinaHtml}
-            <div class="total"><span>TOTAL:</span><span>$${totales.value.total.toLocaleString()}</span></div>
-          </div>
-
-          ${notasHtml}
-          
-          <p style="text-align:center; margin-top:20px; font-size:0.8em; font-weight:800;">¡GRACIAS POR SU COMPRA!</p>
+    const ticketHtml = `
+      <div id="ticket-impresion" class="ticket-container">
+        <h1 class="ticket-header">RESTAURANTE BRISTO</h1>
+        <div class="ticket-info-cliente">
+          <p><strong>MESA:</strong> ${mesa} | <strong>CLIENTE:</strong> ${nombre}</p>
+          <span class="ticket-metodo-pago">PAGO: ${metodoPago}</span>
         </div>
-      </body>
-    </html>
-  `);
-  win.document.close();
+        <table class="ticket-table">${filas}</table>
+        <div class="ticket-totales">
+          <div class="ticket-linea-total"><span>Subtotal:</span><span>$${totales.value.subtotal.toLocaleString()}</span></div>
+          <div class="ticket-linea-total"><span>IVA (19%):</span><span>$${totales.value.iva.toLocaleString()}</span></div>
+          ${propinaHtml}
+          <div class="ticket-total-grande"><span>TOTAL:</span><span>$${totales.value.total.toLocaleString()}</span></div>
+        </div>
+        ${notasHtml}
+        <p class="ticket-footer">¡GRACIAS POR SU COMPRA!</p>
+      </div>
+    `;
 
-  setTimeout(() => {
-    win.print();
-    win.close();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<html><head><link rel="stylesheet" href="src/style.css"></head><body>${ticketHtml}</body></html>`);
+    doc.close();
 
-    Swal.fire({
-      title: '¡ÉXITO!',
-      text: 'Pedido procesado correctamente',
-      icon: 'success',
-      confirmButtonColor: '#FF4D4D'
-    }).then(() => {
-      carrito.value = [];
-      cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
-      propinaPorcentaje.value = 0;
-      // Guardamos el stock actualizado (ya sin los items vendidos) en el almacenamiento permanente
-      localStorage.setItem('platos_bistro', JSON.stringify(platos.value));
-      if (typeof actualizarTotales === 'function') actualizarTotales();
-      if (typeof cerrarModal === 'function') cerrarModal();
-    });
-  }, 500);
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      document.body.removeChild(iframe);
+      Swal.fire({ title: '¡ÉXITO!', text: 'Pedido procesado correctamente', icon: 'success', confirmButtonColor: '#FF4D4D' }).then(() => {
+        carrito.value = [];
+        cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
+        propinaPorcentaje.value = 0;
+        localStorage.setItem('platosbristo', JSON.stringify(platos.value));
+        actualizarTotales();
+        cerrarModal();
+      });
+    }, 500);
+  });
 }
 </script>
