@@ -54,7 +54,7 @@
           <img :src="producto.imagen">
           <div class="card-content">
             <div class="card-title">{{ producto.nombre }}</div>
-            <div class="card-price-tag">${{ producto.precio.toLocaleString() }}</div>
+            <div class="card-price-tag">${{ (producto.precio || 0).toLocaleString() }}</div>
 
             <div v-if="producto.stock > 0" class="stock-tag">
               Disponibles: {{ producto.stock }}
@@ -87,11 +87,11 @@
           <div class="form-datos">
             <div class="form-field">
               <label>NOMBRE DEL PLATO</label>
-              <input type="text" v-model="formPlato.nombre" placeholder="Ej: Pizza Hawayana">
+              <input type="text" v-model="formPlato.nombre" placeholder="Pizza Hawayana">
             </div>
             <div class="form-field">
               <label>DESCRIPCIÓN</label>
-              <textarea v-model="formPlato.descripcion" rows="2" placeholder="Ingredientes y detalles..."></textarea>
+              <textarea v-model="formPlato.descripcion" rows="2" placeholder="Ingredientes y detalles"></textarea>
             </div>
             <div class="form-grid-2">
               <div class="form-field">
@@ -133,7 +133,7 @@
       <div class="factura-box">
         <div class="factura-header">
           <h2>SU CUENTA</h2>
-          <p>Restaurante Bistro - Mesa #{{ cliente.mesa || ' ' }}</p>
+          <p>Restaurante Bistro - Mesa #{{ cliente.mesa.toString().slice(0, 2) || ' ' }}</p>
           <button v-on:click="cerrarModal" class="btn-cerrar-x">x</button>
         </div>
 
@@ -156,7 +156,7 @@
           <div v-for="(item, index) in carrito" class="item-control">
             <div class="item-info">
               <div class="item-nombre">{{ item.nombre }}</div>
-              <div class="item-precio-unit">${{ item.precio.toLocaleString() }} c/u</div>
+              <div class="item-precio-unit">${{ (item.precio || 0).toLocaleString() }} c/u</div>
             </div>
             <div class="item-qty-selector">
               <button class="qty-btn" v-on:click="cambiarCantidad(index, -1)">-</button>
@@ -164,7 +164,7 @@
               <button class="qty-btn" v-on:click="cambiarCantidad(index, 1)">+</button>
             </div>
             <div class="item-total-line">
-              ${{ (item.precio * item.cantidad).toLocaleString() }}
+              ${{ ((item.precio || 0) * item.cantidad).toLocaleString() }}
             </div>
           </div>
 
@@ -179,7 +179,7 @@
             <div class="form-grid-2">
               <div class="form-field">
                 <label>NUMERO DE MESA</label>
-                <input type="number" v-model="cliente.mesa" placeholder="01" min="1">
+                <input type="number" v-model="cliente.mesa" placeholder="01" min="1" max="99" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);">
               </div>
               <div class="form-field">
                 <label>METODO DE PAGO</label>
@@ -258,7 +258,7 @@ import Swal from 'sweetalert2';
 // ========================================
 // 1. ESTADO REACTIVO
 // ========================================
-const PLATOSINICIO = [
+const PLATOSINICIO = ([
   { nombre: "Hamburguesa Especial", descripcion: "Carne angus 200g, queso cheddar, tocino y vegetales frescos.", precio: 25000, imagen: "src/assets/hamburguesaE.jpg", categoria: "Rapidas", stock: 8 },
   { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
   { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapeños, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
@@ -299,7 +299,7 @@ const PLATOSINICIO = [
   { nombre: "Salmon Teriyaki", descripcion: "Salmon glaseado en salsa dulce con vegetales salteados.", precio: 49000, imagen: "src/assets/salmonT.jpg", categoria: "Platos Fuertes", stock: 15 },
   { nombre: "Lomo a la Pimienta", descripcion: "Corte premium de res con salsa cremosa de pimienta.", precio: 54000, imagen: "src/assets/lomoP.jpg", categoria: "Platos Fuertes", stock: 10 },
   { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso con variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
-];
+]);
 
 const platosGuardados = localStorage.getItem('platosbristo');
 const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOSINICIO);
@@ -380,8 +380,14 @@ function platosStorage() {
 const datosGuardados = localStorage.getItem('carrito_bistro');
 if (datosGuardados) {
   const guardado = JSON.parse(datosGuardados);
-  carrito.value = guardado;
-  guardado.forEach(itemCarrito => {
+  carrito.value = guardado.map(itemCarrito => {
+    const plato = platos.value.find(p => p.nombre === itemCarrito.nombre);
+    return {
+      ...itemCarrito,
+      precio: itemCarrito.precio || (plato ? plato.precio : 0)
+    };
+  });
+  carrito.value.forEach(itemCarrito => {
     const plato = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
     if (plato) {
       plato.stock -= itemCarrito.cantidad;
@@ -393,8 +399,14 @@ function actualizarTotales() {
   let subtotal = 0;
   let unidades = 0;
   for (let i = 0; i < carrito.value.length; i++) {
-    subtotal += carrito.value[i].precio * carrito.value[i].cantidad;
-    unidades += carrito.value[i].cantidad;
+    const item = carrito.value[i];
+    const platoOriginal = platos.value.find(p => p.nombre === item.nombre);
+    if (platoOriginal) {
+      item.precio = platoOriginal.precio;
+    }
+    const precio = item.precio || 0;
+    subtotal += precio * item.cantidad;
+    unidades += item.cantidad;
   }
   totalUnidades.value = unidades;
   totales.value.subtotal = subtotal;
@@ -434,7 +446,17 @@ function guardarPlato() {
   }
   if (editandoPlatoNombre.value) {
     const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
-    if (index !== -1) platos.value[index] = { ...formPlato.value };
+    if (index !== -1) {
+      // Si el nombre cambio, actualizar tambien el carrito
+      if (editandoPlatoNombre.value !== nombre) {
+        carrito.value.forEach(item => {
+          if (item.nombre === editandoPlatoNombre.value) {
+            item.nombre = nombre;
+          }
+        });
+      }
+      platos.value[index] = { ...formPlato.value };
+    }
   } else {
     if (platos.value.find(producto => producto.nombre === nombre)) return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
     platos.value.push({ ...formPlato.value });
@@ -442,6 +464,7 @@ function guardarPlato() {
   cerrarFormPlato();
   platosStorage();
   aplicarFiltros();
+  actualizarTotales(); // Recalcular totales por si cambio nombre o precio
   Swal.fire('¡Éxito!', editandoPlatoNombre.value ? 'Producto actualizado' : 'Producto agregado', 'success');
 }
 
@@ -486,15 +509,20 @@ function agregarAlCarrito(producto) {
 
 function cambiarCantidad(index, valor) {
   const itemCarrito = carrito.value[index];
+  if (!itemCarrito) return;
+  
   let productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
+  
   if (valor > 0) {
     if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51' });
+    if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.' });
     if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.' });
+    
     itemCarrito.cantidad++;
     productoOriginal.stock--;
   } else {
     itemCarrito.cantidad--;
-    productoOriginal.stock++;
+    if (productoOriginal) productoOriginal.stock++;
     if (itemCarrito.cantidad <= 0) carrito.value.splice(index, 1);
   }
   actualizarTotales();
@@ -525,6 +553,8 @@ function cerrarSiEsFuera(evento) { if (evento.target.classList.contains('modal-o
 
 function finalizarPedido() {
   const { nombre, mesa, metodoPago, notas } = cliente.value;
+  const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
+  
   if (!carrito.value.length) return Swal.fire('Error', 'Carrito vacío', 'error');
   if (!nombre || !mesa || !metodoPago) return Swal.fire('Atención', 'Completa tus datos', 'info');
 
@@ -549,7 +579,7 @@ function finalizarPedido() {
       <div id="ticket-impresion" class="ticket-container">
         <h1 class="ticket-header">RESTAURANTE BRISTO</h1>
         <div class="ticket-info-cliente">
-          <p><strong>MESA:</strong> ${mesa} | <strong>CLIENTE:</strong> ${nombre}</p>
+          <p><strong>MESA:</strong> ${mesaLimitada} | <strong>CLIENTE:</strong> ${nombre}</p>
           <span class="ticket-metodo-pago">PAGO: ${metodoPago}</span>
         </div>
         <table class="ticket-table">${filas}</table>
