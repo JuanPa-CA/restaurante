@@ -143,7 +143,7 @@
           <div v-if="carrito.length === 0" class="factura-vacia">
             <p class="vacia-sub">¡Tu carrito está vacío!</p>
             <p class="vacia-sub">Parece que aún no has elegido nada.</p>
-            <button class="btn-pedido btn-oscuro" v-on:click="cerrarModal">EXPLORAR MENÚ</button>
+            <button class="btn-pedido btn-oscuro" v-on:click="cerrarModal">EXPLORAR</button>
           </div>
 
           <!-- Encabezado de items -->
@@ -263,7 +263,7 @@ const PLATOSINICIO = ([
   { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
   { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapeños, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
   { nombre: "Nuggets de Pollo", descripcion: "8 piezas de pechuga apanada con papas fritas pequeñas.", precio: 16000, imagen: "src/assets/nuggetsP.jpg", categoria: "Snacks", stock: 20 },
-  { nombre: "Salchipapa Monstruosa", descripcion: "Cama de papas fritas, salchicha suiza, pollo desmechado y mucho queso.", precio: 32000, imagen: "src/assets/salchipapaM.jpg", categoria: "Snacks", stock: 6 },
+  { nombre: "Salchipapa Monstruosa", descripcion: "Cama de papas fritas, salchicha suiza, pollo desmechado y mucho queso.", precio: 32000, imagen: "src/assets/salchipapaM.jpg", categoria: "Rapidas", stock: 6 },
   { nombre: "Empanadas (x3)", descripcion: "Tradicionales de carne y papa, acompañadas de aji casero.", precio: 12000, imagen: "src/assets/empanadasT.jpg", categoria: "Snacks", stock: 30 },
   { nombre: "Nachos Locos", descripcion: "Totopos crujientes con chili, queso fundido y pico de gallo.", precio: 19000, imagen: "src/assets/nachosL.jpg", categoria: "Snacks", stock: 10 },
   { nombre: "Papas Bravas", descripcion: "Cubos de papa frita con salsa picante y alioli.", precio: 14000, imagen: "src/assets/papasB.jpg", categoria: "Snacks", stock: 18 },
@@ -282,7 +282,7 @@ const PLATOSINICIO = ([
   { nombre: "Poke de Atun", descripcion: "Atun marinado, mango, rabano y arroz de sushi.", precio: 31000, imagen: "src/assets/pokeA.jpg", categoria: "Platos Fuertes", stock: 12 },
   { nombre: "Bowl de Salmon", descripcion: "Base de quinoa, salmon fresco, edamame y aderezo ginger.", precio: 38000, imagen: "src/assets/bowlS.jpg", categoria: "Platos Fuertes", stock: 10 },
   { nombre: "Filete de Pescado", descripcion: "Pescado blanco al ajillo con ensalada verde.", precio: 29000, imagen: "src/assets/fileteP.jpg", categoria: "Platos Fuertes", stock: 9 },
-  { nombre: "Pizza Pepperoni", descripcion: "Masa artesanal, salsa de tomate italiana y doble pepperoni.", precio: 28000, imagen: "src/assets/pizzaP.jpg", categoria: "Platos Fuertes", stock: 15 },
+  { nombre: "Pizza Pepperoni", descripcion: "Masa artesanal, salsa de tomate italiana y doble pepperoni.", precio: 28000, imagen: "src/assets/pizzaP.jpg", categoria: "Rapidas", stock: 15 },
   { nombre: "Pasta Carbonara", descripcion: "Espagueti con salsa de huevo, queso pecorino y guanciale.", precio: 27000, imagen: "src/assets/pastaC.jpg", categoria: "Platos Fuertes", stock: 12 },
   { nombre: "Lasaña de Carne", descripcion: "Capas de pasta con bolonesa de la casa y salsa bechamel.", precio: 26000, imagen: "src/assets/lasañaC.jpg", categoria: "Platos Fuertes", stock: 10 },
   { nombre: "Ramen Tonkotsu", descripcion: "Caldo de cerdo, fideos frescos, huevo marinado y cerdo chashu.", precio: 33000, imagen: "src/assets/ramenT.jpg", categoria: "Platos Fuertes", stock: 8 },
@@ -476,7 +476,8 @@ function eliminarPlato(nombre) {
     showCancelButton: true,
     confirmButtonColor: '#FF4D4D',
     cancelButtonColor: '#011627',
-    confirmButtonText: 'Sí, eliminar'
+    cancelButtonText: 'CANCELAR',
+    confirmButtonText: 'ELIMINAR'
   }).then((result) => {
     if (result.isConfirmed) {
       platos.value = platos.value.filter(producto => producto.nombre !== nombre);
@@ -488,7 +489,7 @@ function eliminarPlato(nombre) {
 }
 
 function agregarAlCarrito(producto) {
-  if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.' });
+  if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.', confirmButtonText: 'ACEPTAR' });
   let item = null;
   for (let i = 0; i < carrito.value.length; i++) {
     if (carrito.value[i].nombre === producto.nombre) {
@@ -497,7 +498,7 @@ function agregarAlCarrito(producto) {
     }
   }
   if (item) {
-    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51' });
+    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     item.cantidad++;
   } else {
     carrito.value.push({ nombre: producto.nombre, precio: producto.precio, cantidad: 1, categoria: producto.categoria });
@@ -514,9 +515,9 @@ function cambiarCantidad(index, valor) {
   let productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
   
   if (valor > 0) {
-    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51' });
-    if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.' });
-    if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.' });
+    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+    if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR'});
+    if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
     
     itemCarrito.cantidad++;
     productoOriginal.stock--;
@@ -529,7 +530,7 @@ function cambiarCantidad(index, valor) {
 }
 
 function vaciarCarrito() {
-  Swal.fire({ icon: 'warning', title: '¿Vaciar carrito?', text: 'Perderás el progreso de la compra', showCancelButton: true, confirmButtonText: 'Vaciar carrito', confirmButtonColor: '#E76F51' }).then(function (resultado) {
+  Swal.fire({ icon: 'warning', title: '¿Vaciar carrito?', text: 'Perderás el progreso de la compra', showCancelButton: true, confirmButtonText: 'VACIAR', confirmButtonColor: '#E76F51', cancelButtonText: 'CANCELAR' }).then(function (resultado) {
     if (resultado.isConfirmed) {
       for (let i = 0; i < carrito.value.length; i++) {
         const itemCarrito = carrito.value[i];
@@ -611,7 +612,7 @@ function finalizarPedido() {
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
       document.body.removeChild(iframe);
-      Swal.fire({ title: '¡ÉXITO!', text: 'Pedido procesado correctamente', icon: 'success', confirmButtonColor: '#FF4D4D' }).then(() => {
+      Swal.fire({ title: '¡ÉXITO!', text: 'Pedido procesado correctamente', icon: 'success', confirmButtonColor: '#FF4D4D', confirmButtonText: '¡VAMOS!' }).then(() => {
         carrito.value = [];
         cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
         propinaPorcentaje.value = 0;
