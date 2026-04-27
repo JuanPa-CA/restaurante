@@ -17,7 +17,7 @@
   --category-pill-height: 32px;
   --grid-min: 280px;
   --modal-max-width: 100%;
-  --card-image-ratio: 16 / 10;
+  --card-image-ratio: 10 / 10;
 }
 
 * {
@@ -231,9 +231,6 @@ header .btn-pedido {
   animation: none;
 }
 
-
-
-
 .contenedor-busqueda {
   display: flex;
   justify-content: center;
@@ -287,7 +284,7 @@ header .btn-pedido {
 
 .btn-dots {
   background: white;
-  border: 3px solid var(--color-oscuro);
+  border: 1px solid var(--color-oscuro);
   width: 36px;
   height: 36px;
   border-radius: 10px;
