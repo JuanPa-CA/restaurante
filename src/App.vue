@@ -6,7 +6,7 @@
       <div class="header-actions">
         <button class="btn-agregar-plus" v-on:click="abrirFormPlato()">+</button>
         <button class="btn-pedido" v-on:click="abrirModal">
-          <span>{{ carrito.length > 0 ? 'Mi Carrito ' : 'CARRITO' }}</span>
+          <span>{{ carrito.length > 0 ? 'MI CARRITO ' : 'CARRITO' }}</span>
           <span class="badge-carrito">{{ totalUnidades }}</span>
         </button>
       </div>
@@ -256,9 +256,9 @@ import Swal from 'sweetalert2';
 
 
 // ========================================
-// 1. ESTADO REACTIVO
+// 1. CONSTANTES
 // ========================================
-const PLATOSINICIO = ([
+const PLATOSINICIO = [
   { nombre: "Hamburguesa Especial", descripcion: "Carne angus 200g, queso cheddar, tocino y vegetales frescos.", precio: 25000, imagen: "src/assets/hamburguesaE.jpg", categoria: "Rapidas", stock: 8 },
   { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
   { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapeños, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
@@ -299,11 +299,14 @@ const PLATOSINICIO = ([
   { nombre: "Salmon Teriyaki", descripcion: "Salmon glaseado en salsa dulce con vegetales salteados.", precio: 49000, imagen: "src/assets/salmonT.jpg", categoria: "Platos Fuertes", stock: 15 },
   { nombre: "Lomo a la Pimienta", descripcion: "Corte premium de res con salsa cremosa de pimienta.", precio: 54000, imagen: "src/assets/lomoP.jpg", categoria: "Platos Fuertes", stock: 10 },
   { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso con variedad de setas y queso parmesano.", precio: 39500, imagen: "src/assets/risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
-]);
+];
 
+
+// ========================================
+// 2. ESTADO REACTIVO
+// ========================================
 const platosGuardados = localStorage.getItem('platosbristo');
 const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOSINICIO);
-
 const categorias = ref(["Todas", "Rapidas", "Snacks", "Tacos y Wraps", "Platos Fuertes", "Bebidas", "Postres"]);
 const categoriaSeleccionada = ref("Todas");
 const platosFiltrados = ref([...platos.value]);
@@ -315,7 +318,6 @@ const cliente = ref({ nombre: '', mesa: '', metodoPago: '', notas: '' });
 const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
 const textoBusqueda = ref("");
 
-// --- NUEVO ESTADO PARA PRODUCTOS ---
 const mostrarFormPlato = ref(false);
 const editandoPlatoNombre = ref(null);
 const menuAbierto = ref(null);
@@ -325,10 +327,176 @@ const formPlato = ref({
   precio: 0,
   imagen: '',
   categoria: 'Rapidas',
-  stock: 0
+  stock: 0,
 });
 
-function abrirFormPlato(plato = null) {
+
+// ========================================
+// 3. LOCAL STORAGE
+// ========================================
+const guardarPlatosEnStorage = () => {
+  const platosGuardar = platos.value.map(p => {
+    const itemEnCarrito = carrito.value.find(c => c.nombre === p.nombre);
+    return {
+      ...p,
+      stock: p.stock + (itemEnCarrito ? itemEnCarrito.cantidad : 0),
+    };
+  });
+  localStorage.setItem('platosbristo', JSON.stringify(platosGuardar));
+};
+
+const actualizarCarritoEnStorage = () => localStorage.setItem('carrito_bistro', JSON.stringify(carrito.value));
+
+const inicializarCarrito = () => {
+  const datosGuardados = localStorage.getItem('carrito_bistro');
+  if (!datosGuardados) return;
+
+  const guardado = JSON.parse(datosGuardados);
+  carrito.value = guardado.map(itemCarrito => {
+    const plato = platos.value.find(p => p.nombre === itemCarrito.nombre);
+    return {
+      ...itemCarrito,
+      precio: itemCarrito.precio || (plato ? plato.precio : 0),
+    };
+  });
+
+  carrito.value.forEach(itemCarrito => {
+    const plato = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
+    if (plato) plato.stock -= itemCarrito.cantidad;
+  });
+};
+
+
+// ========================================
+// 4. FILTROS Y BÚSQUEDA
+// ========================================
+const aplicarFiltros = () => {
+  const prefijo = textoBusqueda.value.toLowerCase().trim();
+  platosFiltrados.value = platos.value.filter(plato => {
+    const coincideCategoria = categoriaSeleccionada.value === 'Todas' || plato.categoria === categoriaSeleccionada.value;
+    const coincideNombre = plato.nombre.toLowerCase().startsWith(prefijo);
+    return coincideCategoria && coincideNombre;
+  });
+};
+
+const filtrarPlatos = categoria => {
+  categoriaSeleccionada.value = categoria;
+  aplicarFiltros();
+};
+
+
+// ========================================
+// 5. CARRITO
+// ========================================
+const cantidadEnCarrito = nombre => {
+  const item = carrito.value.find(itemCarrito => itemCarrito.nombre === nombre);
+  return item ? item.cantidad : 0;
+};
+
+const actualizarTotales = () => {
+  let subtotal = 0;
+  let unidades = 0;
+
+  carrito.value.forEach(item => {
+    const platoOriginal = platos.value.find(p => p.nombre === item.nombre);
+    if (platoOriginal) item.precio = platoOriginal.precio;
+
+    const precio = item.precio || 0;
+    subtotal += precio * item.cantidad;
+    unidades += item.cantidad;
+  });
+
+  totalUnidades.value = unidades;
+  totales.value.subtotal = subtotal;
+  totales.value.iva = subtotal * 0.19;
+  totales.value.propina = subtotal * (propinaPorcentaje.value / 100);
+  totales.value.total = totales.value.subtotal + totales.value.iva + totales.value.propina;
+
+  actualizarCarritoEnStorage();
+};
+
+const agregarAlCarrito = producto => {
+  if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.', confirmButtonText: 'ACEPTAR' });
+
+  const item = carrito.value.find(c => c.nombre === producto.nombre);
+  if (item) {
+    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+    item.cantidad++;
+  } else {
+    carrito.value.push({ nombre: producto.nombre, precio: producto.precio, cantidad: 1, categoria: producto.categoria });
+  }
+
+  producto.stock--;
+  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '¡Agregado!', showConfirmButton: false, timer: 1100, background: '#2A9D8F', color: '#fff' });
+  actualizarTotales();
+};
+
+const cambiarCantidad = (index, valor) => {
+  const itemCarrito = carrito.value[index];
+  if (!itemCarrito) return;
+
+  const productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
+
+  if (valor > 0) {
+    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+    if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR' });
+    if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
+
+    itemCarrito.cantidad++;
+    productoOriginal.stock--;
+  } else {
+    itemCarrito.cantidad--;
+    if (productoOriginal) productoOriginal.stock++;
+    if (itemCarrito.cantidad <= 0) carrito.value.splice(index, 1);
+  }
+
+  actualizarTotales();
+};
+
+const vaciarCarrito = () => {
+  Swal.fire({
+    icon: 'warning',
+    title: '¿Vaciar carrito?',
+    text: 'Perderás el progreso de la compra',
+    showCancelButton: true,
+    confirmButtonText: 'VACIAR',
+    confirmButtonColor: '#E76F51',
+    cancelButtonText: 'CANCELAR',
+  }).then(resultado => {
+    if (!resultado.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Vaciando...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+
+        carrito.value.forEach(itemCarrito => {
+          const platoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
+          if (platoOriginal) platoOriginal.stock += itemCarrito.cantidad;
+        });
+
+        carrito.value = [];
+        actualizarTotales();
+
+        setTimeout(() => {
+          Swal.fire({ icon: 'success', title: '¡CARRITO VACÍO!', confirmButtonText: 'CERRAR' });
+        }, 500);
+      },
+    });
+  });
+};
+
+const seleccionarPropina = valor => {
+  propinaPorcentaje.value = valor;
+  actualizarTotales();
+};
+
+
+// ========================================
+// 6. PRODUCTOS
+// ========================================
+const abrirFormPlato = plato => {
   if (plato) {
     editandoPlatoNombre.value = plato.nombre;
     formPlato.value = { ...plato };
@@ -340,249 +508,104 @@ function abrirFormPlato(plato = null) {
       precio: 0,
       imagen: '',
       categoria: 'Rapidas',
-      stock: 0
+      stock: 0,
     };
   }
+
   mostrarFormPlato.value = true;
   menuAbierto.value = null;
-}
+};
 
-function cerrarFormPlato() {
+const cerrarFormPlato = () => {
   mostrarFormPlato.value = false;
-}
+};
 
-function manejarArchivo(evento) {
+const manejarArchivo = evento => {
   const archivo = evento.target.files[0];
-  if (archivo) {
-    const reader = new FileReader();
-    reader.onload = (evento) => {
-      formPlato.value.imagen = evento.target.result;
-    };
-    reader.readAsDataURL(archivo);
-  }
-}
+  if (!archivo) return;
 
-function toggleMenu(nombre) {
+  const reader = new FileReader();
+  reader.onload = eventoArchivo => {
+    formPlato.value.imagen = eventoArchivo.target.result;
+  };
+  reader.readAsDataURL(archivo);
+};
+
+const toggleMenu = nombre => {
   menuAbierto.value = menuAbierto.value === nombre ? null : nombre;
-}
+};
 
-function platosStorage() {
-  const platosGuardar = platos.value.map(p => {
-    const itemEnCarrito = carrito.value.find(c => c.nombre === p.nombre);
-    return {
-      ...p,
-      stock: p.stock + (itemEnCarrito ? itemEnCarrito.cantidad : 0)
-    };
-  });
-  localStorage.setItem('platosbristo', JSON.stringify(platosGuardar));
-}
-
-const datosGuardados = localStorage.getItem('carrito_bistro');
-if (datosGuardados) {
-  const guardado = JSON.parse(datosGuardados);
-  carrito.value = guardado.map(itemCarrito => {
-    const plato = platos.value.find(p => p.nombre === itemCarrito.nombre);
-    return {
-      ...itemCarrito,
-      precio: itemCarrito.precio || (plato ? plato.precio : 0)
-    };
-  });
-  carrito.value.forEach(itemCarrito => {
-    const plato = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
-    if (plato) {
-      plato.stock -= itemCarrito.cantidad;
-    }
-  });
-}
-
-function actualizarTotales() {
-  let subtotal = 0;
-  let unidades = 0;
-  for (let i = 0; i < carrito.value.length; i++) {
-    const item = carrito.value[i];
-    const platoOriginal = platos.value.find(p => p.nombre === item.nombre);
-    if (platoOriginal) {
-      item.precio = platoOriginal.precio;
-    }
-    const precio = item.precio || 0;
-    subtotal += precio * item.cantidad;
-    unidades += item.cantidad;
-  }
-  totalUnidades.value = unidades;
-  totales.value.subtotal = subtotal;
-  totales.value.iva = subtotal * 0.19;
-  totales.value.propina = subtotal * (propinaPorcentaje.value / 100);
-  totales.value.total = totales.value.subtotal + totales.value.iva + totales.value.propina;
-  localStorage.setItem('carrito_bistro', JSON.stringify(carrito.value));
-}
-
-actualizarTotales();
-
-function aplicarFiltros() {
-  const prefijo = textoBusqueda.value.toLowerCase().trim();
-  platosFiltrados.value = platos.value.filter(plato => {
-    const coincideCategoria = categoriaSeleccionada.value === "Todas" || plato.categoria === categoriaSeleccionada.value;
-    const coincideNombre = plato.nombre.toLowerCase().startsWith(prefijo);
-    return coincideCategoria && coincideNombre;
-  });
-}
-
-function filtrarPlatos(categoria) {
-  categoriaSeleccionada.value = categoria;
-  aplicarFiltros();
-}
-
-function cantidadEnCarrito(nombre) {
-  for (let i = 0; i < carrito.value.length; i++) {
-    if (carrito.value[i].nombre === nombre) return carrito.value[i].cantidad;
-  }
-  return 0;
-}
-
-function guardarPlato() {
+const guardarPlato = () => {
   const { nombre, descripcion, precio, imagen, categoria, stock } = formPlato.value;
+
   if (!nombre || !descripcion || !precio || !imagen || !categoria) {
     return Swal.fire('Error', 'Todos los campos son obligatorios', 'error');
   }
+
   if (editandoPlatoNombre.value) {
     const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
     if (index !== -1) {
-      // Si el nombre cambio, actualizar tambien el carrito
       if (editandoPlatoNombre.value !== nombre) {
         carrito.value.forEach(item => {
-          if (item.nombre === editandoPlatoNombre.value) {
-            item.nombre = nombre;
-          }
+          if (item.nombre === editandoPlatoNombre.value) item.nombre = nombre;
         });
       }
       platos.value[index] = { ...formPlato.value };
     }
   } else {
-    if (platos.value.find(producto => producto.nombre === nombre)) return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
+    if (platos.value.find(producto => producto.nombre === nombre)) {
+      return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
+    }
     platos.value.push({ ...formPlato.value });
   }
-  cerrarFormPlato();
-  platosStorage();
-  aplicarFiltros();
-  actualizarTotales(); // Recalcular totales por si cambio nombre o precio
-  Swal.fire('¡Éxito!', editandoPlatoNombre.value ? 'Producto actualizado' : 'Producto agregado', 'success');
-}
 
-function eliminarPlato(nombre) {
+  cerrarFormPlato();
+  guardarPlatosEnStorage();
+  aplicarFiltros();
+  actualizarTotales();
+  Swal.fire('¡Éxito!', editandoPlatoNombre.value ? 'Producto actualizado' : 'Producto agregado', 'success');
+};
+
+const eliminarPlato = nombre => {
   Swal.fire({
     title: '¿Eliminar producto?',
-    text: "Esta acción no se puede deshacer",
+    text: 'Esta acción no se puede deshacer',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#FF4D4D',
     cancelButtonColor: '#011627',
     cancelButtonText: 'CANCELAR',
-    confirmButtonText: 'ELIMINAR'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      platos.value = platos.value.filter(producto => producto.nombre !== nombre);
-      platosStorage();
-      aplicarFiltros();
-      Swal.fire('Eliminado', 'El producto ha sido eliminado', 'success');
-    }
+    confirmButtonText: 'ELIMINAR',
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    platos.value = platos.value.filter(producto => producto.nombre !== nombre);
+    guardarPlatosEnStorage();
+    aplicarFiltros();
+    Swal.fire('Eliminado', 'El producto ha sido eliminado', 'success');
   });
-}
+};
 
-function agregarAlCarrito(producto) {
-  if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.', confirmButtonText: 'ACEPTAR' });
-  let item = null;
-  for (let i = 0; i < carrito.value.length; i++) {
-    if (carrito.value[i].nombre === producto.nombre) {
-      item = carrito.value[i];
-      break;
-    }
-  }
-  if (item) {
-    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
-    item.cantidad++;
-  } else {
-    carrito.value.push({ nombre: producto.nombre, precio: producto.precio, cantidad: 1, categoria: producto.categoria });
-  }
-  producto.stock--;
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '¡Agregado!', showConfirmButton: false, timer: 1000, background: '#2A9D8F', color: '#fff' });
-  actualizarTotales();
-}
 
-function cambiarCantidad(index, valor) {
-  const itemCarrito = carrito.value[index];
-  if (!itemCarrito) return;
-  
-  let productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
-  
-  if (valor > 0) {
-    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
-    if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR'});
-    if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
-    
-    itemCarrito.cantidad++;
-    productoOriginal.stock--;
-  } else {
-    itemCarrito.cantidad--;
-    if (productoOriginal) productoOriginal.stock++;
-    if (itemCarrito.cantidad <= 0) carrito.value.splice(index, 1);
-  }
-  actualizarTotales();
-}
+// ========================================
+// 7. MODALES Y PEDIDO
+// ========================================
+const abrirModal = () => {
+  mostrarModal.value = true;
+};
 
-function vaciarCarrito() {
-  Swal.fire({
-    icon: 'warning',
-    title: '¿Vaciar carrito?',
-    text: 'Perderás el progreso de la compra',
-    showCancelButton: true,
-    confirmButtonText: 'VACIAR',
-    confirmButtonColor: '#E76F51',
-    cancelButtonText: 'CANCELAR'
-  }).then((resultado) => {
-    if (resultado.isConfirmed) {
-      // 1. Mostramos el spinner inmediatamente
-      Swal.fire({
-        title: 'Vaciando...',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-          
-          // 2. Ejecutamos tu lógica
-          for (let i = 0; i < carrito.value.length; i++) {
-            const itemCarrito = carrito.value[i];
-            const platoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
-            if (platoOriginal) platoOriginal.stock += itemCarrito.cantidad;
-          }
-          carrito.value = [];
-          actualizarTotales();
+const cerrarModal = () => {
+  mostrarModal.value = false;
+};
 
-          // 3. Cambiamos el spinner por el mensaje final
-          setTimeout(() => {
-            Swal.fire({
-              icon: 'success',
-              title: '¡CARRITO VACÍO!',
-              confirmButtonText: 'CERRAR'
-            });
-          }, 600); // Pequeña pausa para que se vea el spinner
-        }
-      });
-    }
-  });
-}
+const cerrarSiEsFuera = evento => {
+  if (evento.target.classList.contains('modal-overlay')) cerrarModal();
+};
 
-function seleccionarPropina(valor) {
-  propinaPorcentaje.value = valor;
-  actualizarTotales();
-}
-
-function abrirModal() { mostrarModal.value = true; }
-function cerrarModal() { mostrarModal.value = false; }
-function cerrarSiEsFuera(evento) { if (evento.target.classList.contains('modal-overlay')) cerrarModal(); }
-
-function finalizarPedido() {
+const finalizarPedido = () => {
   const { nombre, mesa, metodoPago, notas } = cliente.value;
   const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
-  
+
   if (!carrito.value.length) return Swal.fire('Error', 'Carrito vacío', 'error');
   if (!nombre || !mesa || !metodoPago) return Swal.fire('Atención', 'Completa tus datos', 'info');
 
@@ -590,7 +613,7 @@ function finalizarPedido() {
     title: 'PROCESANDO PAGO',
     html: 'Procesando',
     allowOutsideClick: false,
-    didOpen: () => { Swal.showLoading(); },
+    didOpen: () => Swal.showLoading(),
     timer: 2000,
     timerProgressBar: true,
   }).then(() => {
@@ -630,6 +653,7 @@ function finalizarPedido() {
     iframe.style.height = '0';
     iframe.style.border = '0';
     document.body.appendChild(iframe);
+
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`<html><head><link rel="stylesheet" href="src/style.css"></head><body>${ticketHtml}</body></html>`);
@@ -639,7 +663,14 @@ function finalizarPedido() {
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
       document.body.removeChild(iframe);
-      Swal.fire({ title: '¡ÉXITO!', text: 'Pedido procesado correctamente', icon: 'success', confirmButtonColor: '#FF4D4D', confirmButtonText: '¡VAMOS!' }).then(() => {
+
+      Swal.fire({
+        title: '¡ÉXITO!',
+        text: 'Pedido procesado correctamente',
+        icon: 'success',
+        confirmButtonColor: '#FF4D4D',
+        confirmButtonText: '¡VAMOS!',
+      }).then(() => {
         carrito.value = [];
         cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
         propinaPorcentaje.value = 0;
@@ -649,5 +680,13 @@ function finalizarPedido() {
       });
     }, 500);
   });
-}
+};
+
+
+// ========================================
+// 8. INICIALIZACIÓN
+// ========================================
+inicializarCarrito();
+aplicarFiltros();
+actualizarTotales();
 </script>
