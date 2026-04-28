@@ -17,7 +17,7 @@
   --category-pill-height: 32px;
   --grid-min: 280px;
   --modal-max-width: 100%;
-  --card-image-ratio: 10 / 10;
+  --card-image-ratio: 13 / 10;
 }
 
 * {
@@ -32,7 +32,7 @@ body {
   font-family: var(--fuente-main);
   min-height: 100vh;
   overflow-x: hidden;
-
+  scrollbar-gutter: stable both-edges;
 
   background-image: url('./assets/fondo.jpg');
   background-size: cover;
@@ -284,58 +284,74 @@ header .btn-pedido {
 
 .btn-dots {
   background: white;
-  border: 1px solid var(--color-oscuro);
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  border: 3px solid var(--color-oscuro);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   font-weight: 900;
   font-size: 1.2rem;
+  line-height: 1;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding-bottom: 8px;
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  color: var(--color-oscuro);
+}
+
+.btn-dots:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px var(--color-oscuro);
+}
+
+.btn-dots:focus-visible {
+  outline: 3px solid var(--color-secundario);
+  outline-offset: 3px;
 }
 
 .dropdown-menu {
   position: absolute;
-  top: 45px;
+  top: 60px;
   left: 0;
   background: white;
-  border: 3px solid var(--color-oscuro);
-  border-radius: 12px;
-  box-shadow: 6px 6px 0px var(--color-oscuro);
+  border: 2px solid var(--color-oscuro);
+  border-radius: 10px;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.17);
   display: flex;
-  flex-direction: column;
   overflow: hidden;
-  min-width: 120px;
+  min-width: 220px;
   animation: dropdown-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform-origin: top left;
 }
 
 .dropdown-menu button {
+  flex: 1;
   padding: 0.8rem 1rem;
   border: none;
   background: none;
   font-family: inherit;
   font-weight: 800;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease;
   color: var(--color-oscuro);
 }
 
+.dropdown-menu button:not(:last-child) {
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+}
+
 .dropdown-menu button:hover {
-  background: var(--color-detalles);
+  background: rgba(254, 191, 105, 0.18);
 }
 
 .dropdown-menu .btn-eliminar {
-  border-top: 2px solid var(--color-oscuro);
   color: var(--color-primario);
 }
 
 .dropdown-menu .btn-eliminar:hover {
-  background: #ffe5e5;
+  background: rgba(255, 77, 77, 0.14);
 }
 
 .upload-wrapper {
@@ -505,7 +521,7 @@ main {
 .stock-tag {
   font-size: 0.86rem;
   font-weight: 700;
-  color: var(--color-oscuro);
+  color: rgb(0, 111, 0);
 }
 
 .stock-tag.agotado {
@@ -525,6 +541,21 @@ main {
   color: white;
 }
 
+.btn-pedido.btn-desactivado {
+  background: #ececec;
+  color: #5c5c5c;
+  border-color: #cacaca;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.14);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-pedido.btn-desactivado:hover {
+  background: #dfdfdf;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.12);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -538,7 +569,6 @@ main {
 
 body:has(.modal-overlay) {
   overflow: hidden;
-  padding-right: 10px;
 }
 
 .factura-box {
@@ -904,6 +934,12 @@ footer {
   border-radius: 20px !important;
   box-shadow: 10px 10px 0px var(--color-oscuro) !important;
   font-family: var(--fuente-main) !important;
+}
+
+body.swal2-shown,
+body.swal2-height-auto {
+  scrollbar-gutter: stable both-edges;
+  padding-right: 0 !important;
 }
 
 .swal2-title {

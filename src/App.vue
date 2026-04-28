@@ -65,8 +65,8 @@
 
             <p class="card-desc">{{ producto.descripcion }}</p>
 
-            <button v-if="producto.stock > 0" class="btn-pedido btn-full" v-on:click="agregarAlCarrito(producto)">
-              {{ cantidadEnCarrito(producto.nombre) == 3 ? 'MÁXIMO ALCANZADO' : (cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR') }}
+            <button v-if="producto.stock > 0" :class="['btn-pedido', 'btn-full', { 'btn-desactivado': cantidadEnCarrito(producto.nombre) == 3 }]" v-on:click="agregarAlCarrito(producto)">
+              {{ cantidadEnCarrito(producto.nombre) == 3 ? 'LÍMITE ALCANZADO' : (cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR') }}
             </button>
             <button v-else class="btn-pedido btn-full btn-desactivado" v-on:click="agregarAlCarrito(producto)">
               SIN STOCK
@@ -263,7 +263,7 @@ const PLATOSINICIO = ([
   { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "src/assets/clubS.jpg", categoria: "Rapidas", stock: 12 },
   { nombre: "Hot-dog Picante", descripcion: "Salchicha premium, jalapeños, cebolla caramelizada y salsa brava.", precio: 18000, imagen: "src/assets/hotdogP.jpg", categoria: "Rapidas", stock: 15 },
   { nombre: "Nuggets de Pollo", descripcion: "12 piezas de pechuga apanada con papas fritas pequeñas.", precio: 16000, imagen: "src/assets/nuggetsP.jpg", categoria: "Snacks", stock: 20 },
-  { nombre: "Salchipapa Monstruosa", descripcion: "Cama de papas fritas, salchicha suiza, pollo desmechado y mucho queso.", precio: 32000, imagen: "src/assets/salchipapaM.jpg", categoria: "Rapidas", stock: 6 },
+  { nombre: "Salchipapa Monstruosa", descripcion: "Cama de papas fritas, salchicha suiza, pollo desmechado y queso.", precio: 32000, imagen: "src/assets/salchipapaM.jpg", categoria: "Rapidas", stock: 6 },
   { nombre: "Empanadas (x3)", descripcion: "Tradicionales de carne y papa, acompañadas de aji casero.", precio: 12000, imagen: "src/assets/empanadasT.jpg", categoria: "Snacks", stock: 30 },
   { nombre: "Nachos Locos", descripcion: "Totopos crujientes con chili, queso fundido y pico de gallo.", precio: 19000, imagen: "src/assets/nachosL.jpg", categoria: "Snacks", stock: 10 },
   { nombre: "Papas Bravas", descripcion: "Cubos de papa frita con salsa picante y alioli.", precio: 14000, imagen: "src/assets/papasB.jpg", categoria: "Snacks", stock: 18 },
@@ -530,15 +530,42 @@ function cambiarCantidad(index, valor) {
 }
 
 function vaciarCarrito() {
-  Swal.fire({ icon: 'warning', title: '¿Vaciar carrito?', text: 'Perderás el progreso de la compra', showCancelButton: true, confirmButtonText: 'VACIAR', confirmButtonColor: '#E76F51', cancelButtonText: 'CANCELAR' }).then(function (resultado) {
+  Swal.fire({
+    icon: 'warning',
+    title: '¿Vaciar carrito?',
+    text: 'Perderás el progreso de la compra',
+    showCancelButton: true,
+    confirmButtonText: 'VACIAR',
+    confirmButtonColor: '#E76F51',
+    cancelButtonText: 'CANCELAR'
+  }).then((resultado) => {
     if (resultado.isConfirmed) {
-      for (let i = 0; i < carrito.value.length; i++) {
-        const itemCarrito = carrito.value[i];
-        const platoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
-        if (platoOriginal) platoOriginal.stock += itemCarrito.cantidad;
-      }
-      carrito.value = [];
-      actualizarTotales();
+      // 1. Mostramos el spinner inmediatamente
+      Swal.fire({
+        title: 'Vaciando...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+          
+          // 2. Ejecutamos tu lógica
+          for (let i = 0; i < carrito.value.length; i++) {
+            const itemCarrito = carrito.value[i];
+            const platoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
+            if (platoOriginal) platoOriginal.stock += itemCarrito.cantidad;
+          }
+          carrito.value = [];
+          actualizarTotales();
+
+          // 3. Cambiamos el spinner por el mensaje final
+          setTimeout(() => {
+            Swal.fire({
+              icon: 'success',
+              title: '¡CARRITO VACÍO!',
+              confirmButtonText: 'CERRAR'
+            });
+          }, 600); // Pequeña pausa para que se vea el spinner
+        }
+      });
     }
   });
 }
