@@ -376,7 +376,8 @@ const aplicarFiltros = () => {
     const coincideCategoria = categoriaSeleccionada.value === 'Todas' || plato.categoria === categoriaSeleccionada.value;
     const coincideNombre = plato.nombre.toLowerCase().startsWith(prefijo);
     return coincideCategoria && coincideNombre;
-  });
+  })
+  .sort((a, b) => (b.stock > 0) - (a.stock > 0));
 };
 
 const filtrarPlatos = categoria => {
