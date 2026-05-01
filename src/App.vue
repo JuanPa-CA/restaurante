@@ -591,6 +591,21 @@ const toggleMenu = nombre => {
 const guardarPlato = () => {
   const { nombre, descripcion, precio, imagen, categoria, stock } = formPlato.value;
 
+  if (editandoPlatoNombre.value) {
+    const platoOriginal = platos.value.find(p => p.nombre === editandoPlatoNombre.value);
+    if (platoOriginal) {
+      const sinCambios =
+        platoOriginal.nombre === nombre &&
+        platoOriginal.descripcion === descripcion &&
+        platoOriginal.precio == precio &&
+        platoOriginal.stock == stock &&
+        platoOriginal.categoria === categoria &&
+        platoOriginal.imagen === imagen;
+
+      if (sinCambios) return Swal.fire({ icon: 'info', title: 'Sin cambios', text: 'Por favor edite algo antes de guardar.', confirmButtonText: 'ACEPTAR', confirmButtonColor: '#E76F51' });
+    }
+  }
+
   if (!nombre || !descripcion || !precio || !imagen || !categoria) return Swal.fire({ icon: 'error', title: 'Error', text: 'Todos los campos son obligatorios.', confirmButtonText: 'ACEPTAR' });
   if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
   if (descripcion.trim().length < 10) return Swal.fire({ icon: 'warning', title: 'Descripción inválida', text: 'La descripción debe tener mínimo 10 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
