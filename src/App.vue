@@ -4,7 +4,6 @@
     <header>
       <h1>RESTAURANTE BRISTO</h1>
       <div class="header-actions">
-        <button class="btn-agregar-plus" v-on:click="abrirFormPlato()">+</button>
         <button class="btn-pedido" v-on:click="abrirModal">
           <span>{{ carrito.length > 0 ? 'MI CARRITO ' : 'CARRITO' }}</span>
           <span class="badge-carrito">{{ totalUnidades }}</span>
@@ -25,11 +24,15 @@
       </template>
     </nav>
 
+    <div>
+      <button class="btn-agregar-plus" v-on:click="abrirFormPlato()">+</button>
+    </div>
+
     <!--Barra de busqueda-->
     <div class="contenedor-busqueda">
       <div class="busqueda-wrapper">
         <span class="icon-busqueda">🔍</span>
-        <input type="text" placeholder="¿Que plato buscas?" v-model="textoBusqueda" v-on:input="aplicarFiltros"
+        <input type="text" placeholder="¿Que estás buscando?" v-model="textoBusqueda" v-on:input="aplicarFiltros"
           class="input-busqueda">
       </div>
     </div>
@@ -372,12 +375,13 @@ const inicializarCarrito = () => {
 // ========================================
 const aplicarFiltros = () => {
   const prefijo = textoBusqueda.value.toLowerCase().trim();
-  platosFiltrados.value = platos.value.filter(plato => {
-    const coincideCategoria = categoriaSeleccionada.value === 'Todas' || plato.categoria === categoriaSeleccionada.value;
-    const coincideNombre = plato.nombre.toLowerCase().startsWith(prefijo);
-    return coincideCategoria && coincideNombre;
-  })
-  .sort((a, b) => (b.stock > 0) - (a.stock > 0));
+  platosFiltrados.value = platos.value
+    .filter(plato => {
+      const coincideCategoria = categoriaSeleccionada.value === 'Todas' || plato.categoria === categoriaSeleccionada.value;
+      const coincideNombre = plato.nombre.toLowerCase().startsWith(prefijo);
+      return coincideCategoria && coincideNombre;
+    })
+    .sort((a, b) => (b.stock > 0) - (a.stock > 0));
 };
 
 const filtrarPlatos = categoria => {
@@ -392,6 +396,17 @@ const filtrarPlatos = categoria => {
 const cantidadEnCarrito = nombre => {
   const item = carrito.value.find(itemCarrito => itemCarrito.nombre === nombre);
   return item ? item.cantidad : 0;
+};
+
+const verificarStockTotal = () => {
+  const sinStock = platos.value.every(plato => plato.stock === 0);
+  if (sinStock) Swal.fire({
+    icon: 'warning',
+    title: '¡Sin stock!',
+    text: 'Todos los productos se han agotado.',
+    confirmButtonText: 'ACEPTAR',
+    confirmButtonColor: '#E76F51',
+  });
 };
 
 const actualizarTotales = () => {
@@ -414,10 +429,12 @@ const actualizarTotales = () => {
   totales.value.total = totales.value.subtotal + totales.value.iva + totales.value.propina;
 
   actualizarCarritoEnStorage();
+  verificarStockTotal();
 };
 
 const agregarAlCarrito = producto => {
   if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.', confirmButtonText: 'ACEPTAR' });
+  if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
 
   const item = carrito.value.find(c => c.nombre === producto.nombre);
   if (item) {
@@ -439,6 +456,7 @@ const cambiarCantidad = (index, valor) => {
   const productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
 
   if (valor > 0) {
+    if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR' });
     if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
@@ -503,14 +521,7 @@ const abrirFormPlato = plato => {
     formPlato.value = { ...plato };
   } else {
     editandoPlatoNombre.value = null;
-    formPlato.value = {
-      nombre: '',
-      descripcion: '',
-      precio: 0,
-      imagen: '',
-      categoria: 'Rapidas',
-      stock: 0,
-    };
+    formPlato.value = { nombre: '', descripcion: '', precio: 0, imagen: '', categoria: 'Rapidas', stock: 0 };
   }
 
   mostrarFormPlato.value = true;
@@ -539,9 +550,11 @@ const toggleMenu = nombre => {
 const guardarPlato = () => {
   const { nombre, descripcion, precio, imagen, categoria, stock } = formPlato.value;
 
-  if (!nombre || !descripcion || !precio || !imagen || !categoria) {
-    return Swal.fire('Error', 'Todos los campos son obligatorios', 'error');
-  }
+  if (!nombre || !descripcion || !precio || !imagen || !categoria) return Swal.fire({ icon: 'error', title: 'Error', text: 'Todos los campos son obligatorios.', confirmButtonText: 'ACEPTAR' });
+  if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (descripcion.trim().length < 10) return Swal.fire({ icon: 'warning', title: 'Descripción inválida', text: 'La descripción debe tener mínimo 10 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (precio <= 0) return Swal.fire({ icon: 'warning', title: 'Precio inválido', text: 'El precio debe ser mayor a 0.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (stock < 0 || stock > 100) return Swal.fire({ icon: 'warning', title: 'Stock inválido', text: 'El stock debe estar entre 0 y 100.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
 
   if (editandoPlatoNombre.value) {
     const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
@@ -554,9 +567,7 @@ const guardarPlato = () => {
       platos.value[index] = { ...formPlato.value };
     }
   } else {
-    if (platos.value.find(producto => producto.nombre === nombre)) {
-      return Swal.fire('Error', 'Ya existe un plato con ese nombre', 'error');
-    }
+    if (platos.value.find(producto => producto.nombre === nombre)) return Swal.fire({ icon: 'error', title: 'Error', text: 'Ya existe un plato con ese nombre.', confirmButtonText: 'ACEPTAR' });
     platos.value.push({ ...formPlato.value });
   }
 
@@ -564,7 +575,7 @@ const guardarPlato = () => {
   guardarPlatosEnStorage();
   aplicarFiltros();
   actualizarTotales();
-  Swal.fire('¡Éxito!', editandoPlatoNombre.value ? 'Producto actualizado' : 'Producto agregado', 'success');
+  Swal.fire({ icon: 'success', title: '¡Éxito!', text: editandoPlatoNombre.value ? 'Producto actualizado.' : 'Producto agregado.', confirmButtonText: 'ACEPTAR' });
 };
 
 const eliminarPlato = nombre => {
@@ -583,7 +594,7 @@ const eliminarPlato = nombre => {
     platos.value = platos.value.filter(producto => producto.nombre !== nombre);
     guardarPlatosEnStorage();
     aplicarFiltros();
-    Swal.fire('Eliminado', 'El producto ha sido eliminado', 'success');
+    Swal.fire({ icon: 'success', title: 'Eliminado', text: 'El producto ha sido eliminado.', confirmButtonText: 'ACEPTAR' });
   });
 };
 
@@ -591,13 +602,8 @@ const eliminarPlato = nombre => {
 // ========================================
 // 7. MODALES Y PEDIDO
 // ========================================
-const abrirModal = () => {
-  mostrarModal.value = true;
-};
-
-const cerrarModal = () => {
-  mostrarModal.value = false;
-};
+const abrirModal = () => { mostrarModal.value = true; };
+const cerrarModal = () => { mostrarModal.value = false; };
 
 const cerrarSiEsFuera = evento => {
   if (evento.target.classList.contains('modal-overlay')) cerrarModal();
@@ -607,8 +613,10 @@ const finalizarPedido = () => {
   const { nombre, mesa, metodoPago, notas } = cliente.value;
   const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
 
-  if (!carrito.value.length) return Swal.fire('Error', 'Carrito vacío', 'error');
-  if (!nombre || !mesa || !metodoPago) return Swal.fire('Atención', 'Completa tus datos', 'info');
+  if (!carrito.value.length) return Swal.fire({ icon: 'error', title: 'Error', text: 'El carrito está vacío.', confirmButtonText: 'ACEPTAR' });
+  if (!nombre || !mesa || !metodoPago) return Swal.fire({ icon: 'info', title: 'Atención', text: 'Completa todos tus datos.', confirmButtonText: 'ACEPTAR' });
+  if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (mesa < 1 || mesa > 25) return Swal.fire({ icon: 'warning', title: 'Mesa inválida', text: 'El número de mesa debe estar entre 1 y 25.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
 
   Swal.fire({
     title: 'PROCESANDO PAGO',
@@ -647,17 +655,49 @@ const finalizarPedido = () => {
     `;
 
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow.document;
     doc.open();
-    doc.write(`<html><head><link rel="stylesheet" href="src/style.css"></head><body>${ticketHtml}</body></html>`);
+    doc.write(`
+  <html>
+    <head>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Lexend', sans-serif; background: white; }
+
+        .ticket-container { font-family: 'Lexend', sans-serif; color: #011627; line-height: 1.4; padding: 25px; width: 95%; max-width: 400px; margin: 40px auto; border: 4px solid #011627; box-shadow: 8px 8px 0 #011627; background: white; }
+        
+        .ticket-header { font-family: 'Bungee', cursive; color: #FF4D4D; text-align: center; margin: 0 0 10px; font-size: 1.8em; }
+        
+        .ticket-info-cliente { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #011627; font-size: 0.9em; }
+        
+        .ticket-metodo-pago { text-transform: uppercase; font-weight: 800; color: #2EC4B6; margin-top: 5px; display: block; }
+        
+        .ticket-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        
+        .ticket-table td { padding: 8px; border-bottom: 2px solid #011627; }
+        
+        .ticket-totales { margin-top: 15px; }
+        .ticket-linea-total { display: flex; justify-content: space-between; }
+        
+        .ticket-total-grande { font-weight: 800; font-size: 1.4em; border-top: 4px solid #011627; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
+
+        .ticket-notas { margin-top: 15px; padding: 10px; border: 2px dashed #011627; font-size: 0.9em; }
+        
+        .ticket-footer { text-align: center; margin-top: 20px; font-size: 0.8em; font-weight: 800; }
+
+        @media print {
+          body { background: white !important; }
+          .ticket-container { margin: 0 auto; box-shadow: none; border: 3px solid #011627; }
+        }
+      </style>
+    </head>
+    <body>${ticketHtml}</body>
+  </html> `);
     doc.close();
 
     setTimeout(() => {
@@ -682,7 +722,6 @@ const finalizarPedido = () => {
     }, 500);
   });
 };
-
 
 // ========================================
 // 8. INICIALIZACIÓN
