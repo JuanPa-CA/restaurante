@@ -617,6 +617,7 @@ body:has(.modal-overlay) {
   height: auto;
   max-height: 100vh;
   align-self: center;
+  z-index: 1000;
 }
 
 .factura-header {
