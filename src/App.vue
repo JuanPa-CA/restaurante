@@ -12,17 +12,23 @@
     </header>
 
     <!-- Barra de Categorias -->
-    <nav class="barra-categorias">
-      <template v-for="categoria in categorias">
-        <button v-if="categoriaSeleccionada === categoria" class="btn-categoria active"
-          v-on:click="filtrarPlatos(categoria)">
-          {{ categoria }}
-        </button>
-        <button v-else class="btn-categoria" v-on:click="filtrarPlatos(categoria)">
-          {{ categoria }}
-        </button>
-      </template>
-    </nav>
+    <div class="carrusel-categorias">
+      <button class="btn-flecha flecha-izq" v-on:click="scrollCategorias(-1)">‹</button>
+      
+      <nav class="barra-categorias" ref="navCategorias">
+        <template v-for="categoria in categorias">
+          <button v-if="categoriaSeleccionada === categoria" class="btn-categoria active"
+            v-on:click="filtrarPlatos(categoria)">
+            {{ categoria }}
+          </button>
+          <button v-else class="btn-categoria" v-on:click="filtrarPlatos(categoria)">
+            {{ categoria }}
+          </button>
+        </template>
+      </nav>
+
+      <button class="btn-flecha flecha-der" v-on:click="scrollCategorias(1)">›</button>
+    </div>
 
     <div>
       <button class="btn-agregar-plus" v-on:click="abrirFormPlato()">+</button>
@@ -303,6 +309,19 @@ const PLATOSINICIO = [
   { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso con variedad de setas y queso parmesano.", precio: 39500, imagen: "risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
 ];
 
+
+
+//comportamiento slider barra de categorias
+const navCategorias = ref(null);
+const scrollCategorias = (direccion) => {
+  if (navCategorias.value) {
+    const firstButton = navCategorias.value.querySelector('.btn-categoria');
+    if (firstButton) {
+      const scrollAmount = firstButton.offsetWidth + 8; // width + gap (0.5rem approx 8px)
+      navCategorias.value.scrollBy({ left: direccion * scrollAmount, behavior: 'smooth' });
+    }
+  }
+};
 
 // ========================================
 // 2. ESTADO REACTIVO
