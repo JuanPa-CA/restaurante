@@ -386,7 +386,7 @@ const PLATOSINICIO = [
 // ========================================
 
 const platosGuardados = localStorage.getItem('platosbristo');
-const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOS_INICIO);
+const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOSINICIO);
 const platosFiltrados = ref([...platos.value]);
 const textoBusqueda = ref("");
 const categoriaSeleccionada = ref("Todas");
