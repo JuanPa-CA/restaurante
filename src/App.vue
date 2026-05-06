@@ -25,6 +25,7 @@
             {{ categoria }}
           </button>
         </template>
+        <button class="btn-agregar-cat" v-on:click="abrirModalCategorias">Agregar Nueva</button>
       </nav>
 
       <button class="btn-flecha flecha-der" v-on:click="scrollCategorias(1)">›</button>
@@ -48,7 +49,7 @@
       <div class="grid-productos">
         <div v-for="producto in platosFiltrados" class="card" :key="producto.nombre">
 
-          <div class="card-options">
+          <div class="card-options" v-on:click.stop>
             <button class="btn-dots" v-on:click.stop="toggleMenu(producto.nombre)">⋮</button>
             <div v-if="menuAbierto === producto.nombre" class="dropdown-menu">
               <button v-on:click="abrirFormPlato(producto)">EDITAR PLATO</button>
@@ -251,10 +252,76 @@
       </div>
     </div>
 
+    <!-- Modal Gestión de Categorías -->
+    <div v-if="mostrarModalCategorias" class="modal-overlay" v-on:click.self="cerrarModalCategorias">
+      <div class="factura-box formulario-producto">
+        <div class="factura-header">
+          <h2>CATEGORÍAS</h2>
+          <button v-on:click="cerrarModalCategorias" class="btn-cerrar-x">x</button>
+        </div>
+        <div class="factura-body">
+          <div class="form-datos">
+
+            <!-- Input para nueva categoría -->
+            <div class="cat-input-row">
+              <input
+                type="text"
+                v-model="nuevaCategoriaTexto"
+                placeholder="Nombre de nueva categoría"
+                class="cat-input"
+                v-on:keydown.enter="agregarCategoria"
+                maxlength="12"
+              >
+              <button class="btn-pedido btn-cat-add" v-on:click="agregarCategoria">+ AGREGAR</button>
+            </div>
+
+            <!-- Categorías personalizadas (editables/eliminables) -->
+            <div v-if="categoriasPersonalizadas.length > 0" class="cat-seccion">
+              <label class="cat-seccion-label">MIS CATEGORÍAS</label>
+              <div class="cat-lista">
+                <div v-for="cat in categoriasPersonalizadas" class="cat-item cat-item-custom" :key="cat">
+                  <div v-if="categoriaEditando === cat" class="cat-edit-row">
+                    <input
+                      type="text"
+                      v-model="categoriaEditandoTexto"
+                      class="cat-input cat-input-sm"
+                      maxlength="12"
+                      v-on:keydown.enter="confirmarEdicionCategoria(cat)"
+                    >
+                    <button class="btn-cat-action btn-cat-ok" v-on:click="confirmarEdicionCategoria(cat)">✓</button>
+                    <button class="btn-cat-action btn-cat-cancel" v-on:click="cancelarEdicionCategoria">✕</button>
+                  </div>
+                  <div v-else class="cat-item-contenido">
+                    <span class="cat-nombre">{{ cat }}</span>
+                    <div class="cat-acciones">
+                      <button class="btn-cat-action btn-cat-edit" v-on:click="iniciarEdicionCategoria(cat)" title="Editar">✏️</button>
+                      <button class="btn-cat-action btn-cat-del" v-on:click="eliminarCategoria(cat)" title="Eliminar">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Categorías fijas -->
+            <div class="cat-seccion">
+              <label class="cat-seccion-label">CATEGORÍAS FIJAS</label>
+              <div class="cat-lista">
+                <div v-for="cat in categoriasFijas" class="cat-item cat-item-fija" :key="cat">
+                  <span class="cat-nombre">{{ cat }}</span>
+                  <span class="cat-badge-fija">FIJA</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <footer>
       <h2 class="footer-logo">RESTAURANTE BISTRO</h2>
-      <p class="footer-info">Calle de los Sabores #123 - Abierto de 8am a 7pm</p>
+      <p class="footer-info">Calle de los Sabores #123 - Abierto de 8 am a 7 pm</p>
     </footer>
   </div>
 </template>
@@ -264,8 +331,13 @@ import { ref } from 'vue';
 import Swal from 'sweetalert2';
 
 // ========================================
-// 1. CONSTANTES
+// 1. CONSTANTES Y DATOS INICIALES
 // ========================================
+
+//array de categorias
+const CATEGORIAS_FIJAS = ["Todas", "Rapidas", "Snacks", "Tacos y Wraps", "Platos Fuertes", "Bebidas", "Postres"];
+
+//array de platos
 const PLATOSINICIO = [
   { nombre: "Hamburguesa Especial", descripcion: "Carne angus 200g, queso cheddar, tocino y vegetales frescos.", precio: 25000, imagen: "hamburguesaE.jpg", categoria: "Rapidas", stock: 8 },
   { nombre: "Club Sandwich", descripcion: "Triple piso con pollo, jamon, huevo, queso y tocino.", precio: 21000, imagen: "clubS.jpg", categoria: "Rapidas", stock: 12 },
@@ -309,39 +381,44 @@ const PLATOSINICIO = [
   { nombre: "Risotto de Hongos", descripcion: "Arroz cremoso con variedad de setas y queso parmesano.", precio: 39500, imagen: "risottoH.jpg", categoria: "Platos Fuertes", stock: 7 },
 ];
 
-
-
-//comportamiento slider barra de categorias
-const navCategorias = ref(null);
-const scrollCategorias = (direccion) => {
-  if (navCategorias.value) {
-    const firstButton = navCategorias.value.querySelector('.btn-categoria');
-    if (firstButton) {
-      const scrollAmount = firstButton.offsetWidth + 8; // width + gap (0.5rem approx 8px)
-      navCategorias.value.scrollBy({ left: direccion * scrollAmount, behavior: 'smooth' });
-    }
-  }
-};
-
 // ========================================
-// 2. ESTADO REACTIVO
+// 2. ESTADO REACTIVO — CATÁLOGO
 // ========================================
+
 const platosGuardados = localStorage.getItem('platosbristo');
-const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOSINICIO);
-const categorias = ref(["Todas", "Rapidas", "Snacks", "Tacos y Wraps", "Platos Fuertes", "Bebidas", "Postres"]);
-const categoriaSeleccionada = ref("Todas");
+const platos = ref(platosGuardados ? JSON.parse(platosGuardados) : PLATOS_INICIO);
 const platosFiltrados = ref([...platos.value]);
+const textoBusqueda = ref("");
+const categoriaSeleccionada = ref("Todas");
+
+const _categoriasCustom = JSON.parse(localStorage.getItem('categorias_custom_bistro') || '[]');
+const categorias = ref([...CATEGORIAS_FIJAS, ..._categoriasCustom]);
+const categoriasPersonalizadas = ref([..._categoriasCustom]);
+const categoriasFijas = ref(CATEGORIAS_FIJAS.filter(c => c !== 'Todas'));
+
+
+// ========================================
+// 3. ESTADO REACTIVO — CARRITO Y PEDIDO
+// ========================================
+
 const carrito = ref([]);
-const mostrarModal = ref(false);
 const totalUnidades = ref(0);
 const propinaPorcentaje = ref(0);
 const cliente = ref({ nombre: '', mesa: '', metodoPago: '', notas: '' });
 const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
-const textoBusqueda = ref("");
 
+
+// ========================================
+// 4. ESTADO REACTIVO — UI / MODALES
+// ========================================
+
+const mostrarModal = ref(false);
 const mostrarFormPlato = ref(false);
-const editandoPlatoNombre = ref(null);
+const mostrarModalCategorias = ref(false);
 const menuAbierto = ref(null);
+const editandoPlatoNombre = ref(null);
+const navCategorias = ref(null);
+
 const formPlato = ref({
   nombre: '',
   descripcion: '',
@@ -351,22 +428,28 @@ const formPlato = ref({
   stock: 0,
 });
 
+const nuevaCategoriaTexto = ref('');
+const categoriaEditando = ref(null);
+const categoriaEditandoTexto = ref('');
+
 
 // ========================================
-// 3. LOCAL STORAGE
+// 5. LOCAL STORAGE
 // ========================================
+
 const guardarPlatosEnStorage = () => {
   const platosGuardar = platos.value.map(p => {
     const itemEnCarrito = carrito.value.find(c => c.nombre === p.nombre);
-    return {
-      ...p,
-      stock: p.stock + (itemEnCarrito ? itemEnCarrito.cantidad : 0),
-    };
+    return { ...p, stock: p.stock + (itemEnCarrito ? itemEnCarrito.cantidad : 0) };
   });
   localStorage.setItem('platosbristo', JSON.stringify(platosGuardar));
 };
 
-const actualizarCarritoEnStorage = () => localStorage.setItem('carrito_bistro', JSON.stringify(carrito.value));
+const actualizarCarritoEnStorage = () =>
+  localStorage.setItem('carrito_bistro', JSON.stringify(carrito.value));
+
+const guardarCategoriasEnStorage = () =>
+  localStorage.setItem('categorias_custom_bistro', JSON.stringify(categoriasPersonalizadas.value));
 
 const inicializarCarrito = () => {
   const datosGuardados = localStorage.getItem('carrito_bistro');
@@ -375,22 +458,20 @@ const inicializarCarrito = () => {
   const guardado = JSON.parse(datosGuardados);
   carrito.value = guardado.map(itemCarrito => {
     const plato = platos.value.find(p => p.nombre === itemCarrito.nombre);
-    return {
-      ...itemCarrito,
-      precio: itemCarrito.precio || (plato ? plato.precio : 0),
-    };
+    return { ...itemCarrito, precio: itemCarrito.precio || (plato ? plato.precio : 0) };
   });
 
   carrito.value.forEach(itemCarrito => {
-    const plato = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
+    const plato = platos.value.find(p => p.nombre === itemCarrito.nombre);
     if (plato) plato.stock -= itemCarrito.cantidad;
   });
 };
 
 
 // ========================================
-// 4. FILTROS Y BÚSQUEDA
+// 6. FILTROS Y BÚSQUEDA
 // ========================================
+
 const aplicarFiltros = () => {
   const prefijo = textoBusqueda.value.toLowerCase().trim();
   platosFiltrados.value = platos.value
@@ -407,17 +488,28 @@ const filtrarPlatos = categoria => {
   aplicarFiltros();
 };
 
+const scrollCategorias = (direccion) => {
+  if (navCategorias.value) {
+    const firstButton = navCategorias.value.querySelector('.btn-categoria');
+    if (firstButton) {
+      const scrollAmount = firstButton.offsetWidth + 8;
+      navCategorias.value.scrollBy({ left: direccion * scrollAmount, behavior: 'smooth' });
+    }
+  }
+};
+
 
 // ========================================
-// 5. CARRITO
+// 7. CARRITO
 // ========================================
+
 const cantidadEnCarrito = nombre => {
-  const item = carrito.value.find(itemCarrito => itemCarrito.nombre === nombre);
+  const item = carrito.value.find(i => i.nombre === nombre);
   return item ? item.cantidad : 0;
 };
 
 const verificarStockTotal = () => {
-  const sinStock = platos.value.every(plato => plato.stock === 0);
+  const sinStock = platos.value.every(p => p.stock === 0);
   if (sinStock) Swal.fire({
     icon: 'warning',
     title: '¡Sin stock!',
@@ -434,9 +526,7 @@ const actualizarTotales = () => {
   carrito.value.forEach(item => {
     const platoOriginal = platos.value.find(p => p.nombre === item.nombre);
     if (platoOriginal) item.precio = platoOriginal.precio;
-
-    const precio = item.precio || 0;
-    subtotal += precio * item.cantidad;
+    subtotal += (item.precio || 0) * item.cantidad;
     unidades += item.cantidad;
   });
 
@@ -471,14 +561,13 @@ const cambiarCantidad = (index, valor) => {
   const itemCarrito = carrito.value[index];
   if (!itemCarrito) return;
 
-  const productoOriginal = platos.value.find(producto => producto.nombre === itemCarrito.nombre);
+  const productoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
 
   if (valor > 0) {
     if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR' });
     if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
-
     itemCarrito.cantidad++;
     productoOriginal.stock--;
   } else {
@@ -507,18 +596,13 @@ const vaciarCarrito = () => {
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
-
-        carrito.value.forEach(itemCarrito => {
-          const platoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
-          if (platoOriginal) platoOriginal.stock += itemCarrito.cantidad;
+        carrito.value.forEach(item => {
+          const platoOriginal = platos.value.find(p => p.nombre === item.nombre);
+          if (platoOriginal) platoOriginal.stock += item.cantidad;
         });
-
         carrito.value = [];
         actualizarTotales();
-
-        setTimeout(() => {
-          Swal.fire({ icon: 'success', title: '¡CARRITO VACÍO!', confirmButtonText: 'CERRAR' });
-        }, 500);
+        setTimeout(() => Swal.fire({ icon: 'success', title: '¡CARRITO VACÍO!', confirmButtonText: 'CERRAR' }), 500);
       },
     });
   });
@@ -531,8 +615,13 @@ const seleccionarPropina = valor => {
 
 
 // ========================================
-// 6. PRODUCTOS
+// 8. GESTIÓN DE PRODUCTOS (CRUD)
 // ========================================
+
+const toggleMenu = nombre => {
+  menuAbierto.value = menuAbierto.value === nombre ? null : nombre;
+};
+
 const abrirFormPlato = plato => {
   if (plato) {
     editandoPlatoNombre.value = plato.nombre;
@@ -541,7 +630,6 @@ const abrirFormPlato = plato => {
     editandoPlatoNombre.value = null;
     formPlato.value = { nombre: '', descripcion: '', precio: 0, imagen: '', categoria: 'Rapidas', stock: 0 };
   }
-
   mostrarFormPlato.value = true;
   menuAbierto.value = null;
 };
@@ -553,16 +641,9 @@ const cerrarFormPlato = () => {
 const manejarArchivo = evento => {
   const archivo = evento.target.files[0];
   if (!archivo) return;
-
   const reader = new FileReader();
-  reader.onload = eventoArchivo => {
-    formPlato.value.imagen = eventoArchivo.target.result;
-  };
+  reader.onload = e => { formPlato.value.imagen = e.target.result; };
   reader.readAsDataURL(archivo);
-};
-
-const toggleMenu = nombre => {
-  menuAbierto.value = menuAbierto.value === nombre ? null : nombre;
 };
 
 const guardarPlato = () => {
@@ -578,7 +659,6 @@ const guardarPlato = () => {
         platoOriginal.stock == stock &&
         platoOriginal.categoria === categoria &&
         platoOriginal.imagen === imagen;
-
       if (sinCambios) return Swal.fire({ icon: 'info', title: 'Sin cambios', text: 'Por favor edite algo antes de guardar.', confirmButtonText: 'ACEPTAR', confirmButtonColor: '#E76F51' });
     }
   }
@@ -592,15 +672,12 @@ const guardarPlato = () => {
   if (editandoPlatoNombre.value) {
     const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
     if (index !== -1) {
-      if (editandoPlatoNombre.value !== nombre) {
-        carrito.value.forEach(item => {
-          if (item.nombre === editandoPlatoNombre.value) item.nombre = nombre;
-        });
-      }
+      if (editandoPlatoNombre.value !== nombre)
+        carrito.value.forEach(item => { if (item.nombre === editandoPlatoNombre.value) item.nombre = nombre; });
       platos.value[index] = { ...formPlato.value };
     }
   } else {
-    if (platos.value.find(producto => producto.nombre === nombre)) return Swal.fire({ icon: 'error', title: 'Error', text: 'Ya existe un plato con ese nombre.', confirmButtonText: 'ACEPTAR' });
+    if (platos.value.find(p => p.nombre === nombre)) return Swal.fire({ icon: 'error', title: 'Error', text: 'Ya existe un plato con ese nombre.', confirmButtonText: 'ACEPTAR' });
     platos.value.push({ ...formPlato.value });
   }
 
@@ -623,8 +700,7 @@ const eliminarPlato = nombre => {
     confirmButtonText: 'ELIMINAR',
   }).then(result => {
     if (!result.isConfirmed) return;
-
-    platos.value = platos.value.filter(producto => producto.nombre !== nombre);
+    platos.value = platos.value.filter(p => p.nombre !== nombre);
     guardarPlatosEnStorage();
     aplicarFiltros();
     Swal.fire({ icon: 'success', title: 'Eliminado', text: 'El producto ha sido eliminado.', confirmButtonText: 'ACEPTAR' });
@@ -633,8 +709,118 @@ const eliminarPlato = nombre => {
 
 
 // ========================================
-// 7. MODALES Y PEDIDO
+// 9. GESTIÓN DE CATEGORÍAS
 // ========================================
+
+const reconstruirCategorias = () => {
+  categorias.value = [...CATEGORIAS_FIJAS, ...categoriasPersonalizadas.value];
+};
+
+const abrirModalCategorias = () => {
+  nuevaCategoriaTexto.value = '';
+  categoriaEditando.value = null;
+  categoriaEditandoTexto.value = '';
+  mostrarModalCategorias.value = true;
+};
+
+const cerrarModalCategorias = () => {
+  mostrarModalCategorias.value = false;
+  categoriaEditando.value = null;
+  nuevaCategoriaTexto.value = '';
+};
+
+const agregarCategoria = () => {
+  const nombre = nuevaCategoriaTexto.value.trim();
+  if (!nombre) return Swal.fire({ icon: 'warning', title: 'Campo vacío', text: 'Ingresa un nombre para la categoría.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (nombre.length < 2) return Swal.fire({ icon: 'warning', title: 'Nombre muy corto', text: 'El nombre debe tener mínimo 2 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (categorias.value.map(c => c.toLowerCase()).includes(nombre.toLowerCase())) return Swal.fire({ icon: 'error', title: 'Ya existe', text: 'Ya existe una categoría con ese nombre.', confirmButtonText: 'ACEPTAR' });
+
+  categoriasPersonalizadas.value.push(nombre);
+  guardarCategoriasEnStorage();
+  reconstruirCategorias();
+  nuevaCategoriaTexto.value = '';
+  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Categoría "${nombre}" agregada`, showConfirmButton: false, timer: 1500 });
+};
+
+const iniciarEdicionCategoria = cat => {
+  categoriaEditando.value = cat;
+  categoriaEditandoTexto.value = cat;
+};
+
+const cancelarEdicionCategoria = () => {
+  categoriaEditando.value = null;
+  categoriaEditandoTexto.value = '';
+};
+
+const confirmarEdicionCategoria = catOriginal => {
+  const nuevoNombre = categoriaEditandoTexto.value.trim();
+  if (!nuevoNombre) return Swal.fire({ icon: 'warning', title: 'Campo vacío', text: 'El nombre no puede estar vacío.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (nuevoNombre.length < 2) return Swal.fire({ icon: 'warning', title: 'Nombre muy corto', text: 'El nombre debe tener mínimo 2 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (nuevoNombre.toLowerCase() !== catOriginal.toLowerCase() && categorias.value.map(c => c.toLowerCase()).includes(nuevoNombre.toLowerCase())) return Swal.fire({ icon: 'error', title: 'Ya existe', text: 'Ya existe una categoría con ese nombre.', confirmButtonText: 'ACEPTAR' });
+
+  Swal.fire({
+    title: '¿Confirmar edición?',
+    html: `Cambiar <b>${catOriginal}</b> → <b>${nuevoNombre}</b>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#2EC4B6',
+    cancelButtonColor: '#011627',
+    confirmButtonText: 'GUARDAR',
+    cancelButtonText: 'CANCELAR',
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    const idx = categoriasPersonalizadas.value.indexOf(catOriginal);
+    if (idx !== -1) categoriasPersonalizadas.value[idx] = nuevoNombre;
+    platos.value.forEach(p => { if (p.categoria === catOriginal) p.categoria = nuevoNombre; });
+    if (categoriaSeleccionada.value === catOriginal) categoriaSeleccionada.value = nuevoNombre;
+
+    guardarPlatosEnStorage();
+    guardarCategoriasEnStorage();
+    reconstruirCategorias();
+    cancelarEdicionCategoria();
+    aplicarFiltros();
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Categoría actualizada', showConfirmButton: false, timer: 1500 });
+  });
+};
+
+const eliminarCategoria = cat => {
+  const productosEnCategoria = platos.value.filter(p => p.categoria === cat);
+  if (productosEnCategoria.length > 0) {
+    return Swal.fire({
+      icon: 'error',
+      title: 'No se puede eliminar',
+      html: `La categoría <b>${cat}</b> tiene <b>${productosEnCategoria.length}</b> producto(s). Reasigna o elimina esos productos primero.`,
+      confirmButtonColor: '#E76F51',
+      confirmButtonText: 'ENTENDIDO',
+    });
+  }
+
+  Swal.fire({
+    title: '¿Eliminar categoría?',
+    html: `Se eliminará <b>${cat}</b> permanentemente.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#FF4D4D',
+    cancelButtonColor: '#011627',
+    confirmButtonText: 'ELIMINAR',
+    cancelButtonText: 'CANCELAR',
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    categoriasPersonalizadas.value = categoriasPersonalizadas.value.filter(c => c !== cat);
+    if (categoriaSeleccionada.value === cat) categoriaSeleccionada.value = 'Todas';
+    guardarCategoriasEnStorage();
+    reconstruirCategorias();
+    aplicarFiltros();
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Categoría eliminada', showConfirmButton: false, timer: 1500 });
+  });
+};
+
+
+// ========================================
+// 10. MODALES Y FINALIZACIÓN DE PEDIDO
+// ========================================
+
 const abrirModal = () => { mostrarModal.value = true; };
 const cerrarModal = () => { mostrarModal.value = false; };
 
@@ -665,8 +851,12 @@ const finalizarPedido = () => {
         <td style="text-align:right;">$${(i.precio * i.cantidad).toLocaleString()}</td>
       </tr>`).join('');
 
-    const propinaHtml = propinaPorcentaje.value > 0 ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>` : '';
-    const notasHtml = notas ? `<div class="ticket-notas"><strong>NOTAS:</strong> ${notas}</div>` : '';
+    const propinaHtml = propinaPorcentaje.value > 0
+      ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
+      : '';
+    const notasHtml = notas
+      ? `<div class="ticket-notas"><strong>NOTAS:</strong> ${notas}</div>`
+      : '';
 
     const ticketHtml = `
       <div id="ticket-impresion" class="ticket-container">
@@ -684,8 +874,7 @@ const finalizarPedido = () => {
         </div>
         ${notasHtml}
         <p class="ticket-footer">¡GRACIAS POR SU COMPRA!</p>
-      </div>
-    `;
+      </div>`;
 
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
@@ -694,11 +883,11 @@ const finalizarPedido = () => {
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
-  <html>
-    <head>
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
-      <style>
+      <html>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
+           <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Lexend', sans-serif; background: white; }
 
@@ -728,9 +917,9 @@ const finalizarPedido = () => {
           .ticket-container { margin: 0 auto; box-shadow: none; border: 3px solid #011627; }
         }
       </style>
-    </head>
-    <body>${ticketHtml}</body>
-  </html> `);
+        </head>
+        <body>${ticketHtml}</body>
+      </html>`);
     doc.close();
 
     setTimeout(() => {
@@ -756,9 +945,18 @@ const finalizarPedido = () => {
   });
 };
 
+
 // ========================================
-// 8. INICIALIZACIÓN
+// 11. EVENTOS GLOBALES
 // ========================================
+
+document.addEventListener('click', () => { menuAbierto.value = null; });
+
+
+// ========================================
+// 12. INICIALIZACIÓN
+// ========================================
+
 inicializarCarrito();
 aplicarFiltros();
 actualizarTotales();

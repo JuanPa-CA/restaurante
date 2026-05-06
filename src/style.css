@@ -113,6 +113,31 @@ header {
   color: var(--color-oscuro);
 }
 
+.btn-agregar-cat {
+  flex: 0 0 calc(
+    (100% - (var(--cat-visible) - 1) * var(--cat-gap-inner)) / var(--cat-visible)
+  );
+  background: rgb(212, 0, 255);
+  border: 2px solid var(--color-oscuro);
+  padding: 0 0.5rem;
+  border-radius: 30px;
+  font-family: var(--fuente-main);
+  font-weight: 800;
+  font-size: 0.8rem;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s;
+  height: 40px;
+  min-height: 26px;
+  scroll-snap-align: start;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 header h1 {
   flex: 0 0 auto;
   width: 100%;
@@ -163,16 +188,14 @@ header .btn-pedido {
 
 .btn-pedido:active {
   transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px var(--color-oscuro);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
   box-shadow: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 
 .btn-categoria:active {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px var(--color-oscuro);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
   box-shadow: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 
 .qty-btn:active {
@@ -190,25 +213,6 @@ header .btn-pedido {
   border: 2px solid var(--color-oscuro);
   flex-shrink: 0;
 }
-
-/* ========================================
-   BARRA DE CATEGORÍAS — MOBILE FIRST
-   ======================================== */
-
-/*
-  SISTEMA DE BARRA DE CATEGORÍAS
-  ─────────────────────────────────────────────
-  Variables de control (se ajustan por breakpoint):
-    --cat-flecha-size  : tamaño de cada botón flecha
-    --cat-gap-outer    : gap entre flechas y barra (en .carrusel-categorias)
-    --cat-gap-inner    : gap entre botones dentro de la barra
-    --cat-visible      : cuántos botones se muestran exactos
-
-  El ancho de la barra se calcula automáticamente como:
-    100vw - 2*(flecha) - 2*(gap-outer) - 2*(page-padding)
-  usando flex en el carrusel (flex: 1 en la barra).
-  ─────────────────────────────────────────────
-*/
 
 .carrusel-categorias {
   --cat-flecha-size: 26px;
@@ -258,18 +262,26 @@ header .btn-pedido {
   width: var(--cat-flecha-size);
   min-width: var(--cat-flecha-size);
   height: var(--cat-flecha-size);
-  border-radius: 50%;
+  border-radius: 20%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 900;
   box-shadow: 2px 2px 0px var(--color-oscuro);
   z-index: 10;
   transition: all 0.18s ease;
   flex-shrink: 0;
   padding-bottom: 3px;
+}
+
+.flecha-izq {
+  margin-right: 25px;
+}
+
+.flecha-der {
+  margin-left: 25px;
 }
 
 .btn-flecha:hover {
@@ -283,14 +295,9 @@ header .btn-pedido {
   box-shadow: none;
 }
 
-/*
-  Cada botón ocupa exactamente 1/N del ancho de la barra,
-  descontando los gaps internos entre botones visibles.
-  Como la barra usa flex:1, su ancho real ya es el disponible.
-*/
 .btn-categoria {
   flex: 0 0 calc(
-    (100% - (var(--cat-visible) - 1) * var(--cat-gap-inner)) / var(--cat-visible)
+    (100% - (var(--cat-visible) - 0.5) * var(--cat-gap-inner)) / var(--cat-visible)
   );
   background: white;
   border: 2px solid var(--color-oscuro);
@@ -305,14 +312,13 @@ header .btn-pedido {
   color: var(--color-oscuro);
   transition: all 0.2s;
   box-shadow: 2px 2px 0px var(--color-oscuro);
-  height: 26px;
+  height: 40px;
   min-height: 26px;
   scroll-snap-align: start;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
 }
 
 .btn-categoria:hover {
@@ -416,7 +422,6 @@ header .btn-pedido {
 .btn-dots:active {
   background: #ccc;
   transform: translate(1px, 1px);
-  animation: none;
   box-shadow: none;
 }
 
@@ -657,9 +662,8 @@ main {
 
 .btn-full:active {
   transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px var(--color-oscuro);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
   box-shadow: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 
 .btn-pedido.btn-desactivado {
@@ -708,10 +712,8 @@ body:has(.modal-overlay) {
 }
 
 .formulario-producto {
-  height: auto;
-  max-height: 100vh;
-  align-self: center;
-  z-index: 1000;
+  height: 100dvh;
+  align-self: stretch;
 }
 
 .factura-header {
@@ -789,6 +791,25 @@ body:has(.modal-overlay) {
   flex-direction: column;
   background-image: url('/restaurante/fondo2.jpg');
   background-size: cover;
+}
+
+/* ── Override: solo modal categorías sin imagen de fondo ── */
+.formulario-producto .cat-modal-body {
+  background-image: none;
+  background-color: #f4f3f0;
+  gap: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* ── form-datos dentro del modal de categorías: contenedor flex limpio ── */
+.formulario-producto .cat-modal-body .form-datos {
+  margin-top: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .factura-vacia {
@@ -1158,144 +1179,68 @@ body.swal2-height-auto {
    ======================================== */
 
 @keyframes toast-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateX(120%) scale(0.8);
-  }
-  60% {
-    opacity: 1;
-    transform: translateX(-1%) scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+  0% { opacity: 0; transform: translateX(120%) scale(0.8); }
+  60% { opacity: 1; transform: translateX(-1%) scale(1.05); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 @keyframes toast-slide-out {
-  0% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-  50% {
-    opacity: 0.95;
-    transform: translateX(10%) scale(0.95);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(120%) scale(0.7);
-  }
+  0% { opacity: 1; transform: translateX(0) scale(1); }
+  50% { opacity: 0.95; transform: translateX(10%) scale(0.95); }
+  100% { opacity: 0; transform: translateX(120%) scale(0.7); }
 }
 
 @keyframes badge-enter {
-  0% {
-    opacity: 0;
-    transform: translate3d(10px, -8px, 0) scale(0.72);
-  }
-  60% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1.08);
-  }
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
+  0% { opacity: 0; transform: translate3d(10px, -8px, 0) scale(0.72); }
+  60% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
 
 @keyframes badge-shimmer {
-  from {
-    transform: translateX(-140%);
-  }
-  to {
-    transform: translateX(170%);
-  }
+  from { transform: translateX(-140%); }
+  to { transform: translateX(170%); }
 }
 
 @keyframes pop-card {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 @keyframes slideIn {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes bounce {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-20px) scale(1.1);
-  }
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.1); }
 }
 
 @keyframes card-appear {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes item-entry {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes dropdown-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(2px) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  0% { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  60% { opacity: 1; transform: translateY(2px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .item-control:nth-child(1) { animation-delay: 0.05s; }
@@ -1310,7 +1255,6 @@ body.swal2-height-auto {
    RESPONSIVIDAD
    ======================================== */
 
-/* Tablet — 640px y superior */
 @media (min-width: 640px) {
   :root {
     --page-padding: clamp(1rem, 4vw, 1.5rem);
@@ -1362,7 +1306,6 @@ body.swal2-height-auto {
     font-size: 1.15rem;
   }
 
-  /* Barra categorías tablet: exactamente 3 botones visibles */
   .carrusel-categorias {
     --cat-flecha-size: 36px;
     --cat-visible: 3;
@@ -1429,7 +1372,6 @@ body.swal2-height-auto {
   }
 }
 
-/* Desktop mediano — 900px y superior */
 @media (min-width: 900px) {
   :root {
     --page-padding: clamp(1rem, 5vw, 2rem);
@@ -1439,7 +1381,6 @@ body.swal2-height-auto {
     --modal-max-width: 500px;
   }
 
-  /* Barra categorías desktop mediano: exactamente 3 botones visibles */
   .carrusel-categorias {
     --cat-flecha-size: 40px;
     --cat-visible: 3;
@@ -1472,7 +1413,6 @@ body.swal2-height-auto {
   }
 }
 
-/* Desktop grande — 1200px y superior */
 @media (min-width: 1200px) {
   :root {
     --page-padding: clamp(1rem, 4vw, 8%);
@@ -1483,7 +1423,6 @@ body.swal2-height-auto {
     --border-radius: 16px;
   }
 
-  /* Barra categorías desktop grande: exactamente 3 botones visibles */
   .carrusel-categorias {
     --cat-flecha-size: 40px;
     --cat-visible: 3;
@@ -1507,7 +1446,6 @@ body.swal2-height-auto {
   }
 }
 
-/* Pantallas muy pequeñas — máx 340px */
 @media (max-width: 340px) {
   :root {
     --page-padding: 0.75rem;
@@ -1576,7 +1514,6 @@ body.swal2-height-auto {
     font-size: 0.95rem;
   }
 
-  /* Barra categorías pantallas muy pequeñas: exactamente 1 botón visible */
   .carrusel-categorias {
     --cat-flecha-size: 28px;
     --cat-visible: 1;
@@ -1593,9 +1530,373 @@ body.swal2-height-auto {
     bottom: 16px;
     right: 10px;
   }
+
+  /* ── Modal categorías en pantallas muy pequeñas ── */
+  .cat-input-row {
+    flex-direction: column;
+  }
+
+  .btn-cat-add {
+    width: 100%;
+  }
+
+  .cat-seccion {
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+  }
+
+  .cat-item {
+    padding: 0.5rem 0.7rem;
+    min-height: 42px;
+  }
+
+  .btn-cat-action {
+    min-width: 30px;
+    min-height: 30px;
+    font-size: 0.8rem;
+  }
 }
 
-/* Landscape en pantallas cortas */
+/* ========================================
+   MODAL CATEGORÍAS
+   ======================================== */
+
+.cat-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-right: 4.25rem;
+}
+
+.cat-header-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.3));
+}
+
+.cat-header p {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 0.15rem;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+.cat-body {
+  background-image: none !important;
+  background-color: #f4f3f0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding: clamp(1.2rem, 4vw, 2rem);
+}
+
+.cat-nueva-card {
+  background: white;
+  border: 3px solid var(--color-oscuro);
+  border-radius: 16px;
+  padding: 1.2rem 1.3rem;
+  box-shadow: 5px 5px 0px var(--color-oscuro);
+}
+
+.cat-nueva-label {
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-oscuro);
+  margin-bottom: 0.75rem;
+}
+
+.cat-input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.cat-input {
+  flex: 1 1 160px;
+  min-width: 0;
+  width: 100%;
+  height: 48px;
+  max-height: 48px;
+  padding: 0.7rem 1rem;
+  font-family: var(--fuente-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-oscuro);
+  background: #f9f9f9;
+  border: 3px solid var(--color-oscuro);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0px var(--color-oscuro);
+  outline: none;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.cat-input:focus {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0px var(--color-oscuro);
+}
+
+.cat-input::placeholder {
+  color: #aaa;
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+
+.cat-input-sm {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  border-width: 2px;
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+  border-radius: 8px;
+  flex: 1 1 100px;
+}
+
+.btn-cat-add {
+  flex: 1 0 auto;
+  white-space: nowrap;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.83rem;
+  letter-spacing: 0.5px;
+  min-height: 44px;
+  background: rgb(212, 0, 255);
+  color: white;
+  border-color: var(--color-oscuro);
+  box-shadow: 3px 3px 0px var(--color-oscuro);
+}
+
+.btn-cat-add:hover {
+  background: #b800dc;
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0px var(--color-oscuro);
+}
+
+.cat-seccion {
+  background: white;
+  border: 3px solid var(--color-oscuro);
+  border-radius: 16px;
+  padding: 1.2rem 1.3rem;
+  box-shadow: 5px 5px 0px var(--color-oscuro);
+  margin-top: 20px;
+}
+
+.cat-seccion-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 2px dashed rgba(0,0,0,0.15);
+}
+
+.cat-seccion-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid var(--color-oscuro);
+}
+
+.cat-dot-custom { background: rgb(212, 0, 255); }
+.cat-dot-fija   { background: #aaa; }
+
+.cat-seccion-label {
+  display: block;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  color: #555;
+  text-transform: uppercase;
+  flex: 1;
+  margin-bottom: 0.75rem;
+}
+
+.cat-count-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: rgb(212, 0, 255);
+  color: white;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  border: 2px solid var(--color-oscuro);
+  min-width: 22px;
+  text-align: center;
+}
+
+.cat-count-fija {
+  background: #aaa;
+}
+
+.cat-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cat-lista-fijas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.45rem;
+}
+
+.cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  border: 2px solid var(--color-oscuro);
+  border-radius: 10px;
+  background: #f9f9f9;
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+  gap: 0.5rem;
+  min-height: 46px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cat-item:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--color-oscuro);
+}
+
+.cat-item-custom {
+  border-left: 4px solid rgb(212, 0, 255);
+  background: white;
+}
+
+.cat-item-fija {
+  background: #f0f0f0;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: center;
+  min-height: 52px;
+  border-style: dashed;
+}
+
+.cat-item-fija:hover {
+  transform: none;
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+}
+
+.cat-item-contenido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+.cat-pill-custom {
+  font-weight: 800;
+  font-size: 0.9rem;
+  background: rgb(212, 0, 255);
+  color: white;
+  padding: 0.2rem 0.75rem;
+  border-radius: 20px;
+  border: 2px solid var(--color-oscuro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.cat-nombre {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #444;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-acciones {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.btn-cat-action {
+  background: white;
+  border: 2px solid var(--color-oscuro);
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+  line-height: 1;
+  min-width: 34px;
+  min-height: 34px;
+}
+
+.btn-cat-action:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--color-oscuro);
+}
+
+.btn-cat-action:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.btn-cat-edit { background: rgb(162, 0, 255); }
+
+.btn-cat-del {
+  background: var(--color-primario);
+  border-color: var(--color-oscuro);
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+}
+
+.btn-cat-del:hover {
+  background: #ff009d;
+  box-shadow: 3px 3px 0px var(--color-primario);
+}
+
+.btn-cat-ok {
+  background: rgb(92, 250, 1);
+  border-color: #1a9b8e;
+  box-shadow: 2px 2px 0px #1a9b8e;
+  font-weight: 900;
+  color: var(--color-oscuro);
+}
+
+.btn-cat-cancel {
+  background: #eee;
+  border-color: #999;
+  box-shadow: 2px 2px 0px #999;
+}
+
+.cat-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.cat-badge-fija {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: #ddd;
+  color: #777;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  white-space: nowrap;
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
   :root {
     --header-height: 72px;
