@@ -61,7 +61,10 @@
             {{ cantidadEnCarrito(producto.nombre) }} en pedido
           </div>
 
+          <div class="card-img-wrapper">
           <img :src="producto.imagen">
+          <span class="card-categoria-badge">{{ producto.categoria }}</span>
+          </div>
           <div class="card-content">
             <div class="card-title">{{ producto.nombre }}</div>
             <div class="card-price-tag">${{ (producto.precio || 0).toLocaleString() }}</div>

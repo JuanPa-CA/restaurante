@@ -30,10 +30,10 @@ body {
   background-color: var(--color-fondo);
   color: var(--color-oscuro);
   font-family: var(--fuente-main);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   scrollbar-gutter: stable both-edges;
-  background-image: url('/fondo.jpg');
+  background-image: url('/restaurante/fondo.jpg');
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -539,6 +539,48 @@ main {
   border-color: var(--color-primario);
 }
 
+.card-img-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-bottom: 4px solid var(--color-oscuro);
+}
+
+.card-img-wrapper img {
+  width: 100%;
+  aspect-ratio: var(--card-image-ratio);
+  min-height: clamp(180px, 22vw, 220px);
+  object-fit: fill;
+  border-bottom: none;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.card:hover .card-img-wrapper img {
+  transform: scale(1.05);
+}
+
+.card-categoria-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  background: #000;
+  color: #ffcc00;
+  font-family: var(--fuente-logo);
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+  padding: 0.28rem 0.65rem;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: inherit;
+  z-index: 10;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 65%;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
 .card-en-pedido {
   position: absolute;
   top: 15px;
@@ -572,18 +614,7 @@ main {
   pointer-events: none;
 }
 
-.card img {
-  width: 100%;
-  aspect-ratio: var(--card-image-ratio);
-  min-height: clamp(180px, 22vw, 220px);
-  object-fit: fill;
-  border-bottom: 4px solid var(--color-oscuro);
-  transition: transform 0.5s ease;
-}
-
-.card:hover img {
-  transform: scale(1.05);
-}
+/* imagen manejada por .card-img-wrapper img */
 
 .card::before {
   content: "";
@@ -789,7 +820,7 @@ body:has(.modal-overlay) {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  background-image: url('/fondo2.jpg');
+  background-image: url('/restaurante/fondo2.jpg');
   background-size: cover;
 }
 
@@ -1796,7 +1827,7 @@ body.swal2-height-auto {
 .cat-pill-custom {
   font-weight: 800;
   font-size: 0.9rem;
-  background: rgb(212, 0, 255);
+  background: rgb(163, 80, 179);
   color: white;
   padding: 0.2rem 0.75rem;
   border-radius: 20px;
@@ -1851,31 +1882,32 @@ body.swal2-height-auto {
   box-shadow: none;
 }
 
-.btn-cat-edit { background: rgb(162, 0, 255); }
+.btn-cat-edit { background: rgb(22, 235, 22); }
 
 .btn-cat-del {
-  background: var(--color-primario);
+  background: rgb(255, 1, 1);
   border-color: var(--color-oscuro);
   box-shadow: 2px 2px 0px var(--color-oscuro);
 }
 
 .btn-cat-del:hover {
-  background: #ff009d;
-  box-shadow: 3px 3px 0px var(--color-primario);
+  background: #a50000;
+  box-shadow: 3px 3px 0px var(--color-oscuro);
 }
 
 .btn-cat-ok {
-  background: rgb(92, 250, 1);
-  border-color: #1a9b8e;
-  box-shadow: 2px 2px 0px #1a9b8e;
+  background: rgb(22, 235, 22) ;
+  border-color: var(--color-oscuro);
+  box-shadow: 2px 2px 0px var(--color-oscuro);
   font-weight: 900;
   color: var(--color-oscuro);
 }
 
 .btn-cat-cancel {
-  background: #eee;
-  border-color: #999;
-  box-shadow: 2px 2px 0px #999;
+  background: var(--color-primario);
+  border-color: var(--color-oscuro);
+  box-shadow: 2px 2px 0px var(--color-oscuro);
+  color: white;
 }
 
 .cat-edit-row {
