@@ -62,9 +62,9 @@
           </div>
 
           <div class="card-img-wrapper">
-          <img :src="producto.imagen">
-          <span class="card-categoria-badge">{{ producto.categoria }}</span>
-          </div>
+  <img :src="producto.imagen">
+  <span class="card-categoria-badge">{{ producto.categoria }}</span>
+</div>
           <div class="card-content">
             <div class="card-title">{{ producto.nombre }}</div>
             <div class="card-price-tag">${{ (producto.precio || 0).toLocaleString() }}</div>
@@ -890,32 +890,24 @@ const finalizarPedido = () => {
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style> @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap');
-
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            html, body { width: 100%; font-family: 'Lexend', sans-serif; background: white; }
-            body { display: flex; justify-content: center; padding: 1rem; }
-            .ticket-container { background: white; width: 100%; max-width: 360px; padding: 1.2rem 1rem; }
-            .ticket-header { font-family: 'Bungee', cursive; font-size: 1.2rem; text-align: center; letter-spacing: 2px; color: #000; padding-bottom: 0.6rem; border-bottom: 3px dashed #000; margin-bottom: 0.6rem; }
-            .ticket-info-cliente { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.6rem; border-bottom: 2px dashed #ccc; }
-            .ticket-metodo-pago { display: inline-block; background: #000; color: #ffcc00; font-family: 'Bungee', cursive; font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 1px; width: fit-content; }
-            .ticket-table { width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; font-size: 0.82rem; }
-            .ticket-table tr { border-bottom: 1px dashed #ddd; }
-            .ticket-table td { padding: 0.4rem 0.15rem; vertical-align: middle;}
-            .ticket-table td:first-child { font-weight: 600; color: #222; }
-            .ticket-table td:last-child  { text-align: right; font-weight: 800; white-space: nowrap; padding-left: 0.5rem; }
-            .ticket-totales { background: #f9f9f9; border: 2px solid #000; border-radius: 6px; padding: 0.6rem 0.75rem; margin-bottom: 0.6rem; }
-            .ticket-linea-total { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0; border-bottom: 1px solid #eee; color: #333; gap: 0.5rem; }
-            .ticket-linea-total:last-child { border-bottom: none; }
-            .ticket-total-grande { display: flex; justify-content: space-between; font-family: 'Bungee', cursive; font-size: 1.1rem; color: #000; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 3px solid #000; gap: 0.5rem; }
-            .ticket-notas { background: #fffbe6; border: 2px dashed #ffcc00; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 600; color: #555; margin-bottom: 0.6rem; word-break: break-word; }
-            .ticket-footer { text-align: center; font-family: 'Bungee', cursive; font-size: 0.85rem; letter-spacing: 1px; color: #000; padding-top: 0.6rem; border-top: 3px dashed #000; }
-            @media print { @page { margin: 6mm; size: 80mm auto; }
-              html, body { width: 100%; padding: 0; background: white; }
-              body { display: block; }
-              .ticket-container { max-width: 100%; padding: 0; } }
-          </style>
+           <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Lexend', sans-serif; background: white; }
+        .ticket-container { font-family: 'Lexend', sans-serif; color: #011627; line-height: 1.4; padding: 25px; width: 95%; max-width: 400px; margin: 40px auto; border: 4px solid #011627; box-shadow: 8px 8px 0 #011627; background: white; 
+        .ticket-header { font-family: 'Bungee', cursive; color: #FF4D4D; text-align: center; margin: 0 0 10px; font-size: 1.8em; }        
+        .ticket-info-cliente { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #011627; font-size: 0.9em; }        
+        .ticket-metodo-pago { text-transform: uppercase; font-weight: 800; color: #2EC4B6; margin-top: 5px; display: block; }       
+        .ticket-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }      
+        .ticket-table td { padding: 8px; border-bottom: 2px solid #011627; }     
+        .ticket-totales { margin-top: 15px; }
+        .ticket-linea-total { display: flex; justify-content: space-between; }   
+        .ticket-total-grande { font-weight: 800; font-size: 1.4em; border-top: 4px solid #011627; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
+        .ticket-notas { margin-top: 15px; padding: 10px; border: 2px dashed #011627; font-size: 0.9em; } 
+        .ticket-footer { text-align: center; margin-top: 20px; font-size: 0.8em; font-weight: 800; }
+        @media print {
+          body { background: white !important; }
+          .ticket-container { margin: 0 auto; box-shadow: none; border: 3px solid #011627; } }
+      </style>
         </head>
         <body>${ticketHtml}</body>
       </html>`);
@@ -943,6 +935,7 @@ const finalizarPedido = () => {
     }, 500);
   });
 };
+
 
 // ========================================
 // 11. EVENTOS GLOBALES
