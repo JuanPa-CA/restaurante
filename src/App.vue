@@ -78,8 +78,8 @@
 
             <p class="card-desc">{{ producto.descripcion }}</p>
 
-            <button v-if="producto.stock > 0" :class="['btn-pedido', 'btn-full', { 'btn-desactivado': cantidadEnCarrito(producto.nombre) == 3 }]" v-on:click="agregarAlCarrito(producto)">
-              {{ cantidadEnCarrito(producto.nombre) == 3 ? 'LÍMITE ALCANZADO' : (cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR') }}
+            <button v-if="producto.stock > 0" class="btn-pedido btn-full" v-on:click="agregarAlCarrito(producto)">
+              {{ cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR' }}
             </button>
             <button v-else class="btn-pedido btn-full btn-desactivado" v-on:click="agregarAlCarrito(producto)">
               SIN STOCK
@@ -418,6 +418,7 @@ const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
 const mostrarModal = ref(false);
 const mostrarFormPlato = ref(false);
 const mostrarModalCategorias = ref(false);
+const pedidoEnProceso = ref(false);
 const menuAbierto = ref(null);
 const editandoPlatoNombre = ref(null);
 const navCategorias = ref(null);
@@ -545,11 +546,9 @@ const actualizarTotales = () => {
 
 const agregarAlCarrito = producto => {
   if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.', confirmButtonText: 'ACEPTAR' });
-  if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
 
   const item = carrito.value.find(c => c.nombre === producto.nombre);
   if (item) {
-    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     item.cantidad++;
   } else {
     carrito.value.push({ nombre: producto.nombre, precio: producto.precio, cantidad: 1, categoria: producto.categoria });
@@ -567,8 +566,6 @@ const cambiarCantidad = (index, valor) => {
   const productoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
 
   if (valor > 0) {
-    if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
-    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR' });
     if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
     itemCarrito.cantidad++;
@@ -831,6 +828,264 @@ const cerrarSiEsFuera = evento => {
   if (evento.target.classList.contains('modal-overlay')) cerrarModal();
 };
 
+const escaparHtml = valor => String(valor ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
+
+const generarFilasTicket = () => carrito.value.map(item => `
+  <div class="ticket-item-row">
+    <div class="ticket-item-main">
+      <span class="ticket-item-name">${escaparHtml(item.nombre)}</span>
+      <span class="ticket-item-meta">${item.cantidad} x $${(item.precio || 0).toLocaleString()}</span>
+    </div>
+    <span class="ticket-item-price">$${((item.precio || 0) * item.cantidad).toLocaleString()}</span>
+  </div>
+`).join('');
+
+const generarDocumentoTicket = ({ nombre, mesa, metodoPago, notas }) => {
+  const filasHtml = generarFilasTicket();
+  const propinaHtml = propinaPorcentaje.value > 0
+    ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
+    : '';
+  const notasHtml = notas
+    ? `<div class="ticket-notas"><strong>NOTAS:</strong> ${escaparHtml(notas)}</div>`
+    : '';
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Factura Restaurante Bristo</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+          :root { color-scheme: only light; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          @page { size: auto; margin: 10mm; }
+          html, body { width: 100%; background: #ffffff; }
+          body {
+            font-family: 'Lexend', sans-serif;
+            color: #011627;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .ticket-shell {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+          }
+          .ticket-container {
+            width: min(100%, 420px);
+            background: #ffffff;
+            border: 4px solid #011627;
+            box-shadow: 8px 8px 0 #011627;
+            padding: 24px 22px;
+            line-height: 1.4;
+          }
+          .ticket-header {
+            font-family: 'Bungee', cursive;
+            color: #FF4D4D;
+            text-align: center;
+            margin-bottom: 14px;
+            font-size: 1.7rem;
+            line-height: 1.15;
+          }
+          .ticket-info-cliente {
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #011627;
+          }
+          .ticket-info-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+          }
+          .ticket-metodo-pago {
+            display: block;
+            margin-top: 8px;
+            color: #2EC4B6;
+            font-weight: 800;
+            text-transform: uppercase;
+          }
+          .ticket-items {
+            display: grid;
+            gap: 10px;
+          }
+          .ticket-item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 14px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #011627;
+          }
+          .ticket-item-main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+          }
+          .ticket-item-name {
+            font-weight: 700;
+            overflow-wrap: anywhere;
+          }
+          .ticket-item-meta {
+            font-size: 0.82rem;
+            color: #465362;
+          }
+          .ticket-item-price {
+            flex-shrink: 0;
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 800;
+          }
+          .ticket-totales {
+            margin-top: 18px;
+            display: grid;
+            gap: 8px;
+          }
+          .ticket-linea-total,
+          .ticket-total-grande {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 14px;
+          }
+          .ticket-linea-total span:last-child,
+          .ticket-total-grande span:last-child {
+            text-align: right;
+            white-space: nowrap;
+          }
+          .ticket-total-grande {
+            margin-top: 6px;
+            padding-top: 10px;
+            border-top: 4px solid #011627;
+            font-size: 1.35rem;
+            font-weight: 800;
+          }
+          .ticket-notas {
+            margin-top: 16px;
+            padding: 10px 12px;
+            border: 2px dashed #011627;
+            font-size: 0.9rem;
+            overflow-wrap: anywhere;
+          }
+          .ticket-footer {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 0.82rem;
+            font-weight: 800;
+          }
+          @media (max-width: 480px) {
+            @page { margin: 6mm; }
+            .ticket-shell { padding: 8px; }
+            .ticket-container {
+              width: 100%;
+              padding: 18px 16px;
+              border-width: 3px;
+              box-shadow: none;
+            }
+            .ticket-header { font-size: 1.45rem; }
+            .ticket-info-grid {
+              flex-direction: column;
+              gap: 4px;
+            }
+            .ticket-item-row { gap: 10px; }
+            .ticket-total-grande { font-size: 1.12rem; }
+          }
+          @media print {
+            html, body {
+              min-height: auto;
+              overflow: visible;
+              background: #ffffff;
+            }
+            .ticket-shell { padding: 0; }
+            .ticket-container {
+              margin: 0 auto;
+              box-shadow: none;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ticket-shell">
+          <div id="ticket-impresion" class="ticket-container">
+            <h1 class="ticket-header">RESTAURANTE BRISTO</h1>
+            <div class="ticket-info-cliente">
+              <div class="ticket-info-grid">
+                <span><strong>MESA:</strong> ${escaparHtml(mesa)}</span>
+                <span><strong>CLIENTE:</strong> ${escaparHtml(nombre)}</span>
+              </div>
+              <span class="ticket-metodo-pago">PAGO: ${escaparHtml(metodoPago)}</span>
+            </div>
+            <div class="ticket-items">${filasHtml}</div>
+            <div class="ticket-totales">
+              <div class="ticket-linea-total"><span>Subtotal:</span><span>$${totales.value.subtotal.toLocaleString()}</span></div>
+              <div class="ticket-linea-total"><span>IVA (19%):</span><span>$${totales.value.iva.toLocaleString()}</span></div>
+              ${propinaHtml}
+              <div class="ticket-total-grande"><span>TOTAL:</span><span>$${totales.value.total.toLocaleString()}</span></div>
+            </div>
+            ${notasHtml}
+            <p class="ticket-footer">GRACIAS POR SU COMPRA</p>
+          </div>
+        </div>
+      </body>
+    </html>`;
+};
+
+const imprimirTicket = async documentoTicket => {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(iframe);
+
+  const ventanaImpresion = iframe.contentWindow;
+  if (!ventanaImpresion) {
+    document.body.removeChild(iframe);
+    throw new Error('No fue posible abrir la vista de impresion.');
+  }
+
+  const limpiarIframe = () => {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  };
+
+  const doc = ventanaImpresion.document;
+  doc.open();
+  doc.write(documentoTicket);
+  doc.close();
+
+  if (doc.fonts?.ready) {
+    try {
+      await doc.fonts.ready;
+    } catch {
+      // Si las fuentes fallan, igual continuamos con la impresion.
+    }
+  }
+
+  await new Promise(resolve => {
+    ventanaImpresion.requestAnimationFrame(() => {
+      ventanaImpresion.requestAnimationFrame(resolve);
+    });
+  });
+
+  ventanaImpresion.onafterprint = limpiarIframe;
+  ventanaImpresion.focus();
+  ventanaImpresion.print();
+  window.setTimeout(limpiarIframe, 1500);
+};
+
 const finalizarPedido = () => {
   const { nombre, mesa, metodoPago, notas } = cliente.value;
   const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
@@ -839,7 +1094,9 @@ const finalizarPedido = () => {
   if (!nombre || !mesa || !metodoPago) return Swal.fire({ icon: 'info', title: 'Atención', text: 'Completa todos tus datos.', confirmButtonText: 'ACEPTAR' });
   if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
   if (mesa < 1 || mesa > 25) return Swal.fire({ icon: 'warning', title: 'Mesa inválida', text: 'El número de mesa debe estar entre 1 y 25.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (pedidoEnProceso.value) return;
 
+  pedidoEnProceso.value = true;
   Swal.fire({
     title: 'PROCESANDO PAGO',
     html: 'Procesando',
@@ -847,95 +1104,44 @@ const finalizarPedido = () => {
     didOpen: () => Swal.showLoading(),
     timer: 2000,
     timerProgressBar: true,
-  }).then(() => {
-    const filas = carrito.value.map(i => `
-      <tr>
-        <td>${i.nombre} x${i.cantidad}</td>
-        <td style="text-align:right;">$${(i.precio * i.cantidad).toLocaleString()}</td>
-      </tr>`).join('');
+  }).then(async () => {
+    try {
+      const documentoTicket = generarDocumentoTicket({
+        nombre,
+        mesa: mesaLimitada,
+        metodoPago,
+        notas,
+      });
 
-    const propinaHtml = propinaPorcentaje.value > 0
-      ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
-      : '';
-    const notasHtml = notas
-      ? `<div class="ticket-notas"><strong>NOTAS:</strong> ${notas}</div>`
-      : '';
+      await imprimirTicket(documentoTicket);
 
-    const ticketHtml = `
-      <div id="ticket-impresion" class="ticket-container">
-        <h1 class="ticket-header">RESTAURANTE BRISTO</h1>
-        <div class="ticket-info-cliente">
-          <p><strong>MESA:</strong> ${mesaLimitada} | <strong>CLIENTE:</strong> ${nombre}</p>
-          <span class="ticket-metodo-pago">PAGO: ${metodoPago}</span>
-        </div>
-        <table class="ticket-table">${filas}</table>
-        <div class="ticket-totales">
-          <div class="ticket-linea-total"><span>Subtotal:</span><span>$${totales.value.subtotal.toLocaleString()}</span></div>
-          <div class="ticket-linea-total"><span>IVA (19%):</span><span>$${totales.value.iva.toLocaleString()}</span></div>
-          ${propinaHtml}
-          <div class="ticket-total-grande"><span>TOTAL:</span><span>$${totales.value.total.toLocaleString()}</span></div>
-        </div>
-        ${notasHtml}
-        <p class="ticket-footer">¡GRACIAS POR SU COMPRA!</p>
-      </div>`;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
-           <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Lexend', sans-serif; background: white; }
-        .ticket-container { font-family: 'Lexend', sans-serif; color: #011627; line-height: 1.4; padding: 25px; width: 95%; max-width: 400px; margin: 40px auto; border: 4px solid #011627; box-shadow: 8px 8px 0 #011627; background: white; 
-        .ticket-header { font-family: 'Bungee', cursive; color: #FF4D4D; text-align: center; margin: 0 0 10px; font-size: 1.8em; }        
-        .ticket-info-cliente { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #011627; font-size: 0.9em; }        
-        .ticket-metodo-pago { text-transform: uppercase; font-weight: 800; color: #2EC4B6; margin-top: 5px; display: block; }       
-        .ticket-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }      
-        .ticket-table td { padding: 8px; border-bottom: 2px solid #011627; }     
-        .ticket-totales { margin-top: 15px; }
-        .ticket-linea-total { display: flex; justify-content: space-between; }   
-        .ticket-total-grande { font-weight: 800; font-size: 1.4em; border-top: 4px solid #011627; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
-        .ticket-notas { margin-top: 15px; padding: 10px; border: 2px dashed #011627; font-size: 0.9em; } 
-        .ticket-footer { text-align: center; margin-top: 20px; font-size: 0.8em; font-weight: 800; }
-        @media print {
-          body { background: white !important; }
-          .ticket-container { margin: 0 auto; box-shadow: none; border: 3px solid #011627; } }
-      </style>
-        </head>
-        <body>${ticketHtml}</body>
-      </html>`);
-    doc.close();
-
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      document.body.removeChild(iframe);
-
-      Swal.fire({
+      await Swal.fire({
         title: '¡ÉXITO!',
         text: 'Pedido procesado correctamente',
         icon: 'success',
         confirmButtonColor: '#FF4D4D',
         confirmButtonText: '¡VAMOS!',
-      }).then(() => {
-        carrito.value = [];
-        cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
-        propinaPorcentaje.value = 0;
-        localStorage.setItem('platosbristo', JSON.stringify(platos.value));
-        actualizarTotales();
-        cerrarModal();
       });
-    }, 500);
+
+      carrito.value = [];
+      cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
+      propinaPorcentaje.value = 0;
+      localStorage.setItem('platosbristo', JSON.stringify(platos.value));
+      actualizarTotales();
+      cerrarModal();
+    } catch (error) {
+      console.error('Error al generar la factura:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo generar la factura',
+        text: 'Intenta nuevamente desde este dispositivo.',
+        confirmButtonText: 'ACEPTAR',
+      });
+    } finally {
+      pedidoEnProceso.value = false;
+    }
   });
 };
-
 
 // ========================================
 // 11. EVENTOS GLOBALES
