@@ -878,153 +878,41 @@ const generarDocumentoTicket = ({ nombre, mesa, metodoPago, notas }) => {
           * { box-sizing: border-box; margin: 0; padding: 0; }
           @page { size: auto; margin: 10mm; }
           html, body { width: 100%; background: #ffffff; }
-          body {
-            font-family: 'Lexend', sans-serif;
-            color: #011627;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .ticket-shell {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            padding: 16px;
-          }
-          .ticket-container {
-            width: min(100%, 420px);
-            background: #ffffff;
-            border: 4px solid #011627;
-            box-shadow: 8px 8px 0 #011627;
-            padding: 24px 22px;
-            line-height: 1.4;
-          }
-          .ticket-header {
-            font-family: 'Bungee', cursive;
-            color: #FF4D4D;
-            text-align: center;
-            margin-bottom: 14px;
-            font-size: 1.7rem;
-            line-height: 1.15;
-          }
-          .ticket-info-cliente {
-            margin-bottom: 18px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #011627;
-          }
-          .ticket-info-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 12px;
-            font-size: 0.92rem;
-            font-weight: 700;
-          }
-          .ticket-metodo-pago {
-            display: block;
-            margin-top: 8px;
-            color: #2EC4B6;
-            font-weight: 800;
-            text-transform: uppercase;
-          }
-          .ticket-items {
-            display: grid;
-            gap: 10px;
-          }
-          .ticket-item-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 14px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #011627;
-          }
-          .ticket-item-main {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-          }
-          .ticket-item-name {
-            font-weight: 700;
-            overflow-wrap: anywhere;
-          }
-          .ticket-item-meta {
-            font-size: 0.82rem;
-            color: #465362;
-          }
-          .ticket-item-price {
-            flex-shrink: 0;
-            text-align: right;
-            white-space: nowrap;
-            font-weight: 800;
-          }
-          .ticket-totales {
-            margin-top: 18px;
-            display: grid;
-            gap: 8px;
-          }
+          body { font-family: 'Lexend', sans-serif; color: #011627; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .ticket-shell { width: 100%; display: flex; justify-content: center; padding: 16px; }
+          .ticket-container { width: min(100%, 420px); background: #ffffff; border: 4px solid #011627; box-shadow: 8px 8px 0 #011627; padding: 24px 22px; line-height: 1.4;}
+          .ticket-header { font-family: 'Bungee', cursive; color: #FF4D4D; text-align: center; margin-bottom: 14px; font-size: 1.7rem; line-height: 1.15;}
+          .ticket-info-cliente { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #011627; }
+          .ticket-info-grid { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 0.92rem; font-weight: 700; }
+          .ticket-metodo-pago { display: block; margin-top: 8px; color: #2EC4B6;  font-weight: 800; text-transform: uppercase; }
+          .ticket-items { display: grid; gap: 10px; }
+          .ticket-item-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding-bottom: 10px; border-bottom: 2px solid #011627; }
+          .ticket-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+          .ticket-item-name { font-weight: 700; overflow-wrap: anywhere; }
+          .ticket-item-meta { font-size: 0.82rem; color: #465362; }
+          .ticket-item-price { flex-shrink: 0; text-align: right; white-space: nowrap; font-weight: 800; }
+          .ticket-totales { margin-top: 18px; display: grid; gap: 8px; }
           .ticket-linea-total,
-          .ticket-total-grande {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 14px;
-          }
+          .ticket-total-grande { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
           .ticket-linea-total span:last-child,
-          .ticket-total-grande span:last-child {
-            text-align: right;
-            white-space: nowrap;
-          }
-          .ticket-total-grande {
-            margin-top: 6px;
-            padding-top: 10px;
-            border-top: 4px solid #011627;
-            font-size: 1.35rem;
-            font-weight: 800;
-          }
-          .ticket-notas {
-            margin-top: 16px;
-            padding: 10px 12px;
-            border: 2px dashed #011627;
-            font-size: 0.9rem;
-            overflow-wrap: anywhere;
-          }
-          .ticket-footer {
-            margin-top: 18px;
-            text-align: center;
-            font-size: 0.82rem;
-            font-weight: 800;
-          }
+          .ticket-total-grande span:last-child { text-align: right; white-space: nowrap; }
+          .ticket-total-grande { margin-top: 6px; padding-top: 10px; border-top: 4px solid #011627; font-size: 1.35rem; font-weight: 800; }
+          .ticket-notas { margin-top: 16px; padding: 10px 12px; border: 2px dashed #011627; font-size: 0.9rem; overflow-wrap: anywhere; }
+          .ticket-footer { margin-top: 18px; text-align: center; font-size: 0.82rem; font-weight: 800; }
           @media (max-width: 480px) {
             @page { margin: 6mm; }
             .ticket-shell { padding: 8px; }
             .ticket-container {
-              width: 100%;
-              padding: 18px 16px;
-              border-width: 3px;
-              box-shadow: none;
-            }
+              width: 100%; padding: 18px 16px; border-width: 3px; box-shadow: none; }
             .ticket-header { font-size: 1.45rem; }
-            .ticket-info-grid {
-              flex-direction: column;
-              gap: 4px;
-            }
+            .ticket-info-grid { flex-direction: column; gap: 4px; }
             .ticket-item-row { gap: 10px; }
             .ticket-total-grande { font-size: 1.12rem; }
           }
           @media print {
-            html, body {
-              min-height: auto;
-              overflow: visible;
-              background: #ffffff;
-            }
+            html, body { min-height: auto; overflow: visible; background: #ffffff; }
             .ticket-shell { padding: 0; }
-            .ticket-container {
-              margin: 0 auto;
-              box-shadow: none;
-              page-break-inside: avoid;
-              break-inside: avoid;
-            }
+            .ticket-container { margin: 0 auto; box-shadow: none; page-break-inside: avoid; break-inside: avoid; }
           }
         </style>
       </head>
