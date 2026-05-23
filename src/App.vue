@@ -246,7 +246,12 @@
 
               <div class="botones-pago">
                 <button class="btn-pedido btn-gris" v-on:click="cerrarModal">CERRAR</button>
-                <button class="btn-pedido" v-on:click="finalizarPedido">PAGAR AHORA</button>
+                <button
+                  :class="['btn-pedido', { 'btn-desactivado': pedidoEnProceso }]"
+                  :disabled="pedidoEnProceso"
+                  v-on:click="finalizarPedido">
+                  {{ pedidoEnProceso ? 'GENERANDO...' : 'PAGAR AHORA' }}
+                </button>
               </div>
             </div>
 
@@ -835,6 +840,10 @@ const escaparHtml = valor => String(valor ?? '')
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#39;');
 
+const esDispositivoMovil = () =>
+  window.matchMedia('(max-width: 767px)').matches ||
+  /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
 const generarFilasTicket = () => carrito.value.map(item => `
   <div class="ticket-item-row">
     <div class="ticket-item-main">
@@ -1086,6 +1095,62 @@ const imprimirTicket = async documentoTicket => {
   window.setTimeout(limpiarIframe, 1500);
 };
 
+const crearContenedorPdfTemporal = documentoTicket => {
+  const estilos = documentoTicket.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? '';
+  const contenido = documentoTicket.match(/<body>([\s\S]*?)<\/body>/)?.[1] ?? '';
+
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:460px;background:#ffffff;z-index:-1;';
+  host.innerHTML = `
+    <style>${estilos}</style>
+    <div class="pdf-ticket-host">${contenido}</div>
+  `;
+
+  document.body.appendChild(host);
+  return host;
+};
+
+const descargarTicketEnPdf = async (documentoTicket, nombreCliente, mesa) => {
+  const { default: html2pdf } = await import('html2pdf.js');
+  const host = crearContenedorPdfTemporal(documentoTicket);
+
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const ticket = host.querySelector('#ticket-impresion');
+    if (!ticket) throw new Error('No se pudo preparar el contenido de la factura.');
+
+    await new Promise(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+
+    const rect = ticket.getBoundingClientRect();
+    const pxToMm = px => px * 25.4 / 96;
+    const pdfWidth = Math.max(80, pxToMm(rect.width) + 4);
+    const pdfHeight = Math.max(120, pxToMm(rect.height) + 4);
+    const nombreArchivo = `factura-mesa-${mesa || 'sin-mesa'}-${nombreCliente.trim().replace(/\s+/g, '-').toLowerCase() || 'cliente'}.pdf`;
+
+    await html2pdf().set({
+      margin: 0,
+      filename: nombreArchivo,
+      image: { type: 'jpeg', quality: 0.98 },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: [pdfWidth, pdfHeight],
+        orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+      },
+    }).from(ticket).save();
+  } finally {
+    host.remove();
+  }
+};
+
 const finalizarPedido = () => {
   const { nombre, mesa, metodoPago, notas } = cliente.value;
   const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
@@ -1113,7 +1178,11 @@ const finalizarPedido = () => {
         notas,
       });
 
-      await imprimirTicket(documentoTicket);
+      if (esDispositivoMovil()) {
+        await descargarTicketEnPdf(documentoTicket, nombre, mesaLimitada);
+      } else {
+        await imprimirTicket(documentoTicket);
+      }
 
       await Swal.fire({
         title: '¡ÉXITO!',
