@@ -78,8 +78,8 @@
 
             <p class="card-desc">{{ producto.descripcion }}</p>
 
-            <button v-if="producto.stock > 0" :class="['btn-pedido', 'btn-full', { 'btn-desactivado': cantidadEnCarrito(producto.nombre) == 3 }]" v-on:click="agregarAlCarrito(producto)">
-              {{ cantidadEnCarrito(producto.nombre) == 3 ? 'LÍMITE ALCANZADO' : (cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR') }}
+            <button v-if="producto.stock > 0" class="btn-pedido btn-full" v-on:click="agregarAlCarrito(producto)">
+              {{ cantidadEnCarrito(producto.nombre) > 0 ? 'AGREGAR OTRO' : 'AGREGAR' }}
             </button>
             <button v-else class="btn-pedido btn-full btn-desactivado" v-on:click="agregarAlCarrito(producto)">
               SIN STOCK
@@ -246,7 +246,9 @@
 
               <div class="botones-pago">
                 <button class="btn-pedido btn-gris" v-on:click="cerrarModal">CERRAR</button>
-                <button class="btn-pedido" v-on:click="finalizarPedido">PAGAR AHORA</button>
+                <button class="btn-pedido" :disabled="procesandoPedido" :class="{ 'btn-desactivado': procesandoPedido }" v-on:click="finalizarPedido">
+                  {{ procesandoPedido ? 'GENERANDO...' : 'PAGAR AHORA' }}
+                </button>
               </div>
             </div>
 
@@ -327,10 +329,54 @@
       <p class="footer-info">Calle de los Sabores #123 - Abierto de 8 am a 7 pm</p>
     </footer>
   </div>
+
+  <Teleport to="body">
+    <div v-if="ticketParaImprimir" class="ticket-print-root" :class="{ 'ticket-print-root--active': imprimiendoTicket }" aria-hidden="true">
+      <div class="ticket-print-page">
+        <h1 class="ticket-print-header">RESTAURANTE BRISTO</h1>
+        <div class="ticket-print-meta">
+          <p><strong>MESA:</strong> {{ ticketParaImprimir.mesa }} | <strong>CLIENTE:</strong> {{ ticketParaImprimir.cliente }}</p>
+          <span class="ticket-print-payment">PAGO: {{ ticketParaImprimir.metodoPago }}</span>
+        </div>
+
+        <div class="ticket-print-items">
+          <div v-for="item in ticketParaImprimir.items" :key="`${item.nombre}-${item.cantidad}`" class="ticket-print-item">
+            <span>{{ item.nombre }} x{{ item.cantidad }}</span>
+            <span>${{ item.total.toLocaleString() }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-print-totals">
+          <div class="ticket-print-total-line">
+            <span>Subtotal:</span>
+            <span>${{ ticketParaImprimir.subtotal.toLocaleString() }}</span>
+          </div>
+          <div class="ticket-print-total-line">
+            <span>IVA (19%):</span>
+            <span>${{ ticketParaImprimir.iva.toLocaleString() }}</span>
+          </div>
+          <div v-if="ticketParaImprimir.propinaPorcentaje > 0" class="ticket-print-total-line">
+            <span>Propina ({{ ticketParaImprimir.propinaPorcentaje }}%):</span>
+            <span>${{ ticketParaImprimir.propina.toLocaleString() }}</span>
+          </div>
+          <div class="ticket-print-grand-total">
+            <span>TOTAL:</span>
+            <span>${{ ticketParaImprimir.total.toLocaleString() }}</span>
+          </div>
+        </div>
+
+        <div v-if="ticketParaImprimir.notas" class="ticket-print-notes">
+          <strong>NOTAS:</strong> {{ ticketParaImprimir.notas }}
+        </div>
+
+        <p class="ticket-print-footer">¡GRACIAS POR SU COMPRA!</p>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import Swal from 'sweetalert2';
 
 // ========================================
@@ -418,6 +464,9 @@ const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
 const mostrarModal = ref(false);
 const mostrarFormPlato = ref(false);
 const mostrarModalCategorias = ref(false);
+const ticketParaImprimir = ref(null);
+const imprimiendoTicket = ref(false);
+const procesandoPedido = ref(false);
 const menuAbierto = ref(null);
 const editandoPlatoNombre = ref(null);
 const navCategorias = ref(null);
@@ -545,11 +594,9 @@ const actualizarTotales = () => {
 
 const agregarAlCarrito = producto => {
   if (producto.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'Lo sentimos, este producto se ha agotado.', confirmButtonText: 'ACEPTAR' });
-  if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
 
   const item = carrito.value.find(c => c.nombre === producto.nombre);
   if (item) {
-    if (item.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     item.cantidad++;
   } else {
     carrito.value.push({ nombre: producto.nombre, precio: producto.precio, cantidad: 1, categoria: producto.categoria });
@@ -567,8 +614,6 @@ const cambiarCantidad = (index, valor) => {
   const productoOriginal = platos.value.find(p => p.nombre === itemCarrito.nombre);
 
   if (valor > 0) {
-    if (totalUnidades.value >= 10) return Swal.fire({ icon: 'warning', title: 'Límite de pedido', text: 'No puedes agregar más de 10 productos por pedido.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
-    if (itemCarrito.cantidad >= 3) return Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo se permiten máximo 3 unidades de cada producto por cliente.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
     if (!productoOriginal) return Swal.fire({ icon: 'error', title: 'Error', text: 'Este producto ya no está disponible en el menú.', confirmButtonText: 'ACEPTAR' });
     if (productoOriginal.stock <= 0) return Swal.fire({ icon: 'error', title: 'Sin stock', text: 'No hay más unidades disponibles.', confirmButtonText: 'ACEPTAR' });
     itemCarrito.cantidad++;
@@ -831,14 +876,82 @@ const cerrarSiEsFuera = evento => {
   if (evento.target.classList.contains('modal-overlay')) cerrarModal();
 };
 
+const construirTicketParaImpresion = ({ nombre, mesa, metodoPago, notas }) => ({
+  cliente: nombre.trim(),
+  mesa: mesa ? mesa.toString().slice(0, 2) : '',
+  metodoPago,
+  subtotal: totales.value.subtotal,
+  iva: totales.value.iva,
+  propina: totales.value.propina,
+  total: totales.value.total,
+  propinaPorcentaje: propinaPorcentaje.value,
+  notas: notas ? notas.trim() : '',
+  items: carrito.value.map(item => ({
+    nombre: item.nombre,
+    cantidad: item.cantidad,
+    total: (item.precio || 0) * item.cantidad,
+  })),
+});
+
+const limpiarPedidoFinalizado = () => {
+  carrito.value = [];
+  cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
+  propinaPorcentaje.value = 0;
+  ticketParaImprimir.value = null;
+  imprimiendoTicket.value = false;
+  localStorage.setItem('platosbristo', JSON.stringify(platos.value));
+  actualizarTotales();
+  cerrarModal();
+};
+
+const cerrarImpresionTicket = () => {
+  imprimiendoTicket.value = false;
+  ticketParaImprimir.value = null;
+  procesandoPedido.value = false;
+
+  Swal.fire({
+    title: '¡EXITO!',
+    text: 'Pedido procesado correctamente',
+    icon: 'success',
+    confirmButtonColor: '#FF4D4D',
+    confirmButtonText: '¡VAMOS!',
+  }).then(() => {
+    limpiarPedidoFinalizado();
+  });
+};
+
+const imprimirTicket = async ticket => {
+  ticketParaImprimir.value = ticket;
+  imprimiendoTicket.value = true;
+  await nextTick();
+
+  let impresionCerrada = false;
+  const finalizarImpresion = () => {
+    if (impresionCerrada) return;
+    impresionCerrada = true;
+    window.removeEventListener('afterprint', finalizarImpresion);
+    cerrarImpresionTicket();
+  };
+
+  window.addEventListener('afterprint', finalizarImpresion, { once: true });
+
+  setTimeout(() => {
+    window.print();
+    setTimeout(finalizarImpresion, 1200);
+  }, 150);
+};
+
 const finalizarPedido = () => {
+  if (procesandoPedido.value) return;
+
   const { nombre, mesa, metodoPago, notas } = cliente.value;
-  const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
 
   if (!carrito.value.length) return Swal.fire({ icon: 'error', title: 'Error', text: 'El carrito está vacío.', confirmButtonText: 'ACEPTAR' });
   if (!nombre || !mesa || !metodoPago) return Swal.fire({ icon: 'info', title: 'Atención', text: 'Completa todos tus datos.', confirmButtonText: 'ACEPTAR' });
   if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
   if (mesa < 1 || mesa > 25) return Swal.fire({ icon: 'warning', title: 'Mesa inválida', text: 'El número de mesa debe estar entre 1 y 25.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+
+  procesandoPedido.value = true;
 
   Swal.fire({
     title: 'PROCESANDO PAGO',
@@ -848,91 +961,9 @@ const finalizarPedido = () => {
     timer: 2000,
     timerProgressBar: true,
   }).then(() => {
-    const filas = carrito.value.map(i => `
-      <tr>
-        <td>${i.nombre} x${i.cantidad}</td>
-        <td style="text-align:right;">$${(i.precio * i.cantidad).toLocaleString()}</td>
-      </tr>`).join('');
-
-    const propinaHtml = propinaPorcentaje.value > 0
-      ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
-      : '';
-    const notasHtml = notas
-      ? `<div class="ticket-notas"><strong>NOTAS:</strong> ${notas}</div>`
-      : '';
-
-    const ticketHtml = `
-      <div id="ticket-impresion" class="ticket-container">
-        <h1 class="ticket-header">RESTAURANTE BRISTO</h1>
-        <div class="ticket-info-cliente">
-          <p><strong>MESA:</strong> ${mesaLimitada} | <strong>CLIENTE:</strong> ${nombre}</p>
-          <span class="ticket-metodo-pago">PAGO: ${metodoPago}</span>
-        </div>
-        <table class="ticket-table">${filas}</table>
-        <div class="ticket-totales">
-          <div class="ticket-linea-total"><span>Subtotal:</span><span>$${totales.value.subtotal.toLocaleString()}</span></div>
-          <div class="ticket-linea-total"><span>IVA (19%):</span><span>$${totales.value.iva.toLocaleString()}</span></div>
-          ${propinaHtml}
-          <div class="ticket-total-grande"><span>TOTAL:</span><span>$${totales.value.total.toLocaleString()}</span></div>
-        </div>
-        ${notasHtml}
-        <p class="ticket-footer">¡GRACIAS POR SU COMPRA!</p>
-      </div>`;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@300;400;600;800&display=swap" rel="stylesheet">
-           <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Lexend', sans-serif; background: white; }
-        .ticket-container { font-family: 'Lexend', sans-serif; color: #011627; line-height: 1.4; padding: 25px; width: 95%; max-width: 400px; margin: 40px auto; border: 4px solid #011627; box-shadow: 8px 8px 0 #011627; background: white; 
-        .ticket-header { font-family: 'Bungee', cursive; color: #FF4D4D; text-align: center; margin: 0 0 10px; font-size: 1.8em; }        
-        .ticket-info-cliente { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #011627; font-size: 0.9em; }        
-        .ticket-metodo-pago { text-transform: uppercase; font-weight: 800; color: #2EC4B6; margin-top: 5px; display: block; }       
-        .ticket-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }      
-        .ticket-table td { padding: 8px; border-bottom: 2px solid #011627; }     
-        .ticket-totales { margin-top: 15px; }
-        .ticket-linea-total { display: flex; justify-content: space-between; }   
-        .ticket-total-grande { font-weight: 800; font-size: 1.4em; border-top: 4px solid #011627; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
-        .ticket-notas { margin-top: 15px; padding: 10px; border: 2px dashed #011627; font-size: 0.9em; } 
-        .ticket-footer { text-align: center; margin-top: 20px; font-size: 0.8em; font-weight: 800; }
-        @media print {
-          body { background: white !important; }
-          .ticket-container { margin: 0 auto; box-shadow: none; border: 3px solid #011627; } }
-      </style>
-        </head>
-        <body>${ticketHtml}</body>
-      </html>`);
-    doc.close();
-
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      document.body.removeChild(iframe);
-
-      Swal.fire({
-        title: '¡ÉXITO!',
-        text: 'Pedido procesado correctamente',
-        icon: 'success',
-        confirmButtonColor: '#FF4D4D',
-        confirmButtonText: '¡VAMOS!',
-      }).then(() => {
-        carrito.value = [];
-        cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
-        propinaPorcentaje.value = 0;
-        localStorage.setItem('platosbristo', JSON.stringify(platos.value));
-        actualizarTotales();
-        cerrarModal();
-      });
-    }, 500);
+    const ticket = construirTicketParaImpresion({ nombre, mesa, metodoPago, notas });
+    mostrarModal.value = false;
+    imprimirTicket(ticket);
   });
 };
 
