@@ -828,9 +828,11 @@ const eliminarCategoria = cat => {
 // ========================================
 
 const abrirModal = () => {
-  const ultimo = parseInt(localStorage.getItem('ultimo_pedido_bistro') || '0');
-  numeroPedido.value = ultimo + 1;
-  localStorage.setItem('ultimo_pedido_bistro', numeroPedido.value);
+  if (!numeroPedido.value) {
+    const ultimo = parseInt(localStorage.getItem('ultimo_pedido_bistro') || '0');
+    numeroPedido.value = ultimo + 1;
+    localStorage.setItem('ultimo_pedido_bistro', numeroPedido.value);
+  }
   mostrarModal.value = true;
 };
 const cerrarModal = () => { mostrarModal.value = false; };
@@ -1090,6 +1092,7 @@ const finalizarPedido = () => {
 
       carrito.value = [];
       cliente.value = { nombre: '', celular: '', metodoPago: '', notas: '' };
+      numeroPedido.value = 0;
       propinaPorcentaje.value = 0;
       localStorage.setItem('platosbristo', JSON.stringify(platos.value));
       actualizarTotales();
