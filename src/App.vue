@@ -146,7 +146,7 @@
       <div class="factura-box">
         <div class="factura-header">
           <h2>SU CUENTA</h2>
-          <p>Restaurante Bistro - Mesa #{{ cliente.mesa.toString().slice(0, 2) || ' ' }}</p>
+          <p>Restaurante Bistro - Pedido #{{ numeroPedido }}</p>
           <button v-on:click="cerrarModal" class="btn-cerrar-x">x</button>
         </div>
 
@@ -191,8 +191,8 @@
 
             <div class="form-grid-2">
               <div class="form-field">
-                <label>NUMERO DE MESA</label>
-                <input type="number" v-model="cliente.mesa" placeholder="01" min="1" max="99" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);">
+                <label>NÚMERO DE CELULAR</label>
+                <input type="tel" v-model="cliente.celular" placeholder="3001234567" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
               </div>
               <div class="form-field">
                 <label>METODO DE PAGO</label>
@@ -412,8 +412,9 @@ const categoriasFijas = ref(CATEGORIAS_FIJAS.filter(c => c !== 'Todas'));
 const carrito = ref([]);
 const totalUnidades = ref(0);
 const propinaPorcentaje = ref(0);
-const cliente = ref({ nombre: '', mesa: '', metodoPago: '', notas: '' });
+const cliente = ref({ nombre: '', celular: '', metodoPago: '', notas: '' });
 const totales = ref({ subtotal: 0, iva: 0, propina: 0, total: 0 });
+const numeroPedido = ref(0);
 
 
 // ========================================
@@ -826,7 +827,12 @@ const eliminarCategoria = cat => {
 // 10. MODALES Y FINALIZACIÓN DE PEDIDO
 // ========================================
 
-const abrirModal = () => { mostrarModal.value = true; };
+const abrirModal = () => {
+  const ultimo = parseInt(localStorage.getItem('ultimo_pedido_bistro') || '0');
+  numeroPedido.value = ultimo + 1;
+  localStorage.setItem('ultimo_pedido_bistro', numeroPedido.value);
+  mostrarModal.value = true;
+};
 const cerrarModal = () => { mostrarModal.value = false; };
 
 const cerrarSiEsFuera = evento => {
@@ -854,7 +860,7 @@ const generarFilasTicket = () => carrito.value.map(item => `
   </div>
 `).join('');
 
-const generarDocumentoTicket = ({ nombre, mesa, metodoPago, notas }) => {
+const generarDocumentoTicket = ({ nombre, celular, numeroPed, metodoPago, notas }) => {
   const filasHtml = generarFilasTicket();
   const propinaHtml = propinaPorcentaje.value > 0
     ? `<div class="ticket-linea-total"><span>Propina (${propinaPorcentaje.value}%):</span><span>$${totales.value.propina.toLocaleString()}</span></div>`
@@ -922,8 +928,9 @@ const generarDocumentoTicket = ({ nombre, mesa, metodoPago, notas }) => {
             <h1 class="ticket-header">RESTAURANTE BRISTO</h1>
             <div class="ticket-info-cliente">
               <div class="ticket-info-grid">
-                <span><strong>MESA:</strong> ${escaparHtml(mesa)}</span>
+                <span><strong>PEDIDO #:</strong> ${escaparHtml(numeroPed)}</span>
                 <span><strong>CLIENTE:</strong> ${escaparHtml(nombre)}</span>
+                <span><strong>CELULAR:</strong> ${escaparHtml(celular)}</span>
               </div>
               <span class="ticket-metodo-pago">PAGO: ${escaparHtml(metodoPago)}</span>
             </div>
@@ -998,7 +1005,7 @@ const crearContenedorPdfTemporal = documentoTicket => {
   return host;
 };
 
-const descargarTicketEnPdf = async (documentoTicket, nombreCliente, mesa) => {
+const descargarTicketEnPdf = async (documentoTicket, nombreCliente, numeroPed) => {
   const { default: html2pdf } = await import('html2pdf.js');
   const host = crearContenedorPdfTemporal(documentoTicket);
 
@@ -1014,7 +1021,7 @@ const descargarTicketEnPdf = async (documentoTicket, nombreCliente, mesa) => {
     const pxToMm = px => px * 25.4 / 96;
     const pdfWidth = Math.max(80, pxToMm(rect.width) + 4);
     const pdfHeight = Math.max(120, pxToMm(rect.height) + 4);
-    const nombreArchivo = `factura-mesa-${mesa || 'sin-mesa'}-${nombreCliente.trim().replace(/\s+/g, '-').toLowerCase() || 'cliente'}.pdf`;
+    const nombreArchivo = `factura-pedido-${numeroPed}-${nombreCliente.trim().replace(/\s+/g, '-').toLowerCase() || 'cliente'}.pdf`;
 
     await html2pdf().set({
       margin: 0,
@@ -1040,13 +1047,13 @@ const descargarTicketEnPdf = async (documentoTicket, nombreCliente, mesa) => {
 };
 
 const finalizarPedido = () => {
-  const { nombre, mesa, metodoPago, notas } = cliente.value;
-  const mesaLimitada = mesa ? mesa.toString().slice(0, 2) : '';
+  const { nombre, celular, metodoPago, notas } = cliente.value;
+  const numeroPed = numeroPedido.value;
 
   if (!carrito.value.length) return Swal.fire({ icon: 'error', title: 'Error', text: 'El carrito está vacío.', confirmButtonText: 'ACEPTAR' });
-  if (!nombre || !mesa || !metodoPago) return Swal.fire({ icon: 'info', title: 'Atención', text: 'Completa todos tus datos.', confirmButtonText: 'ACEPTAR' });
+  if (!nombre || !celular || !metodoPago) return Swal.fire({ icon: 'info', title: 'Atención', text: 'Completa todos tus datos.', confirmButtonText: 'ACEPTAR' });
   if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
-  if (mesa < 1 || mesa > 25) return Swal.fire({ icon: 'warning', title: 'Mesa inválida', text: 'El número de mesa debe estar entre 1 y 25.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (!/^\d{10}$/.test(celular)) return Swal.fire({ icon: 'warning', title: 'Celular inválido', text: 'El número de celular debe tener exactamente 10 dígitos.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
   if (pedidoEnProceso.value) return;
 
   pedidoEnProceso.value = true;
@@ -1061,13 +1068,14 @@ const finalizarPedido = () => {
     try {
       const documentoTicket = generarDocumentoTicket({
         nombre,
-        mesa: mesaLimitada,
+        celular,
+        numeroPed,
         metodoPago,
         notas,
       });
 
       if (esDispositivoMovil()) {
-        await descargarTicketEnPdf(documentoTicket, nombre, mesaLimitada);
+        await descargarTicketEnPdf(documentoTicket, nombre, numeroPed);
       } else {
         await imprimirTicket(documentoTicket);
       }
@@ -1081,7 +1089,7 @@ const finalizarPedido = () => {
       });
 
       carrito.value = [];
-      cliente.value = { nombre: '', mesa: '', metodoPago: '', notas: '' };
+      cliente.value = { nombre: '', celular: '', metodoPago: '', notas: '' };
       propinaPorcentaje.value = 0;
       localStorage.setItem('platosbristo', JSON.stringify(platos.value));
       actualizarTotales();
