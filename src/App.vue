@@ -673,7 +673,7 @@ const guardarPlato = () => {
   if (nombre.trim().length < 3) return Swal.fire({ icon: 'warning', title: 'Nombre inválido', text: 'El nombre debe tener mínimo 3 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
   if (descripcion.trim().length < 10) return Swal.fire({ icon: 'warning', title: 'Descripción inválida', text: 'La descripción debe tener mínimo 10 caracteres.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
   if (precio <= 0) return Swal.fire({ icon: 'warning', title: 'Precio inválido', text: 'El precio debe ser mayor a 0.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
-  if (stock < 0 || stock > 100) return Swal.fire({ icon: 'warning', title: 'Stock inválido', text: 'El stock debe estar entre 0 y 100.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
+  if (stock < 0 || stock > 9999) return Swal.fire({ icon: 'warning', title: 'Stock inválido', text: 'El stock debe estar entre 0 y 9999.', confirmButtonColor: '#E76F51', confirmButtonText: 'ACEPTAR' });
 
   if (editandoPlatoNombre.value) {
     const index = platos.value.findIndex(p => p.nombre === editandoPlatoNombre.value);
